@@ -4,6 +4,9 @@ docs/ARCHITECTURE.md
 docs/assets/brand/sbfleet-mark.svg
 docs/assets/brand/sbfleet-wordmark.svg
 docs/assets/readme/01-terminal-home.png
+docs/assets/readme/02-project-status.png
+docs/assets/readme/03-studio.png
+docs/assets/readme/04-sandbox-lifecycle.png
 docs/BACKUP_RESTORE.md
 docs/CLI_REFERENCE.md
 docs/COMMAND_SPEC.md
