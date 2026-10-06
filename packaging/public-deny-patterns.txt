@@ -1,0 +1,16 @@
+# Path substrings that must never appear in a public export (one per line).
+.cursor/
+CURSOR_AUTONOMOUS_RUN.md
+docs/ASTRA_
+docs/CURSOR_
+docs/IMPLEMENTATION_DECISIONS.md
+docs/PLANNING_VALIDATION.md
+docs/SBFLEET_V1_MANUAL
+docs/audits/
+docs/verification/
+docs/assets/readme/SCREENSHOT_PLAN.md
+scripts/rename-tests-map.txt
+.env
+AGE-SECRET-KEY
+BEGIN PRIVATE KEY
+.git/

@@ -1,0 +1,28 @@
+# Reviewed tool artifact pins for SBfleet managed installs.
+# Runtime verification uses these committed SHA256 digests — not a live checksums.txt fetch.
+
+[meta]
+format_version = 1
+notes = "linux amd64/arm64 only; refuse other architectures"
+
+[supabase."2.118.0".linux.amd64]
+url = "https://github.com/supabase/cli/releases/download/v2.118.0/supabase_2.118.0_linux_amd64.tar.gz"
+sha256 = "f6089a86fb9d9221c958193a277338daddd6822f706929943812fa32e106c86d"
+archive_member = "supabase"
+
+[supabase."2.118.0".linux.arm64]
+url = "https://github.com/supabase/cli/releases/download/v2.118.0/supabase_2.118.0_linux_arm64.tar.gz"
+sha256 = "0cd35fea97c2c93dce8a2cd661311be88c107233946cbe3692566196238859c5"
+archive_member = "supabase"
+
+[age."1.3.2".linux.amd64]
+url = "https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-amd64.tar.gz"
+sha256 = "cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10"
+archive_member = "age/age"
+extra_members = ["age/age-keygen"]
+
+[age."1.3.2".linux.arm64]
+url = "https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-linux-arm64.tar.gz"
+sha256 = "6b8dc4333c53a5a57c9e5834e3a48f92605d7154014cd07269ff3327db5d37f4"
+archive_member = "age/age"
+extra_members = ["age/age-keygen"]

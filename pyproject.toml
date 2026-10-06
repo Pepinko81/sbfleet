@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sbfleet"
+version = "1.0.0"
+description = "Small CLI for multiple official self-hosted Supabase projects on one Linux host"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "sbfleet" }]
+dependencies = [
+  "tomli>=2.0.1; python_version < '3.11'",
+  "prompt_toolkit>=3.0.47",
+]
+
+[project.urls]
+Homepage = "https://sbfleet.com"
+Repository = "https://github.com/Pepinko81/sbfleet"
+Documentation = "https://github.com/Pepinko81/sbfleet#readme"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.6",
+  "build>=1.2",
+]
+
+[project.scripts]
+sbfleet = "sbfleet.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
+addopts = ["--import-mode=importlib"]
+markers = [
+  "docker: requires Docker Engine/Compose",
+  "sandbox: requires pinned Supabase CLI",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

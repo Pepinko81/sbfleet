@@ -1,0 +1,37 @@
+# Secrets and deployment state never belong in the source repository
+.env
+.env.*
+!.env.example
+*.agekey
+*.pem
+*.key
+/secrets/
+/runtime/
+/projects/
+/backups/
+/cache/
+/generated/
+/upstream/
+/.sbfleet/
+/supabase/.temp/
+/supabase/.branches/
+/.supabase/
+*.tar
+*.tgz
+*.tar.gz
+*.age
+*.partial
+# Python / development
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+.cursor/plans/
+# Keep .cursor/rules tracked
