@@ -88,6 +88,17 @@ Direct command authorizes documented downtime. Not idempotent: every success get
 
 **Interrupted update (`--reconcile`):** Continues the **same** unresolved `UPDATING` `operation_id` from its canonical promote-record. Requires maintenance lock + exact operation identity. Diagnoses live type/state/hash vs frozen plan; refuses foreign/unexpected paths. Does **not** create a new recovery backup, rebuild the plan, select a new edge, or replace the operation identity. If staging can be cryptographically rebound to the original approved target, resumes only remaining exact-source promotions then downstream pull/start/verify/metadata/journal completion. If staging is missing or cannot be rebound → diagnose-only. Same-pin restore of the pre-update archive into a promoted different-pin destination remains unsupported; sbfleet does not claim cross-version rollback.
 
+
+Reconcile requires the canonical regular `staging/update-<operation_id>/promote-record.json`,
+its original operation/backup/edge identity, and the complete original staged target.
+Only that validated record is excluded from upstream byte comparison; arbitrary extra
+files still refuse. Missing/replaced live paths refuse (a planned addition still absent
+is an exact-source state). No-promotion and partial-promotion states resume only
+exact-source paths. Complete promotion and runtime-verified/journal-incomplete states
+also rebind staging and rerun runtime verification before advancing `last_verified_upstream`.
+Missing or invalid evidence remains a nonzero refusal with retained staging and journal;
+there is no new plan, backup, edge, operation identity, or generic rollback.
+
 **Evidence:** unit/process `tests/unit/test_update_promote_reconcile.py`, `tests/process/test_update_promote_process_death.py`, `tests/unit/test_update_fault_injection.py`, `tests/process/test_update.py`; disposable Docker `tests/acceptance/test_update.py`.
 
 JSON only for `--dry-run` (reconcile prints JSON diagnosis/result on stdout).

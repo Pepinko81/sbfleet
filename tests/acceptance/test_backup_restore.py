@@ -92,7 +92,7 @@ def disposable_home(tmp_path: Path):
     # Exact labeled cleanup even on setup/assertion failure (no prune).
     import fixture_cleanup
 
-    fixture_cleanup.cleanup_labeled_fleet_resources(fleet_id=fleet)
+    assert not fixture_cleanup.cleanup_labeled_fleet_resources(fleet_id=fleet)
 
 
 def _sentinel(run_id: str) -> tuple[str, str]:

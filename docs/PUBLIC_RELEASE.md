@@ -1,29 +1,23 @@
 # Public release operator sequence
 
-This document is for maintainers publishing SBfleet from the **private development repository** to a **clean public repository**. Do not flip the private repo public.
+Develop in the private repository and publish only a sanitized tree to the public
+repository. Never publish private development history or change its visibility.
 
-## Problem
+## Release preparation
 
-The private GitHub slug `Pepinko81/sbfleet` holds full development history (internal audits, run evidence, personal paths). Publishing that history would expose material that the public tree intentionally omits.
+1. Prepare the version, README, and changelog on a private release branch.
+2. Confirm matching versions in `pyproject.toml`, package metadata, and `sbfleet --version`.
+3. Run lint, unit/process, build, and isolated wheel-install gates; complete the separate installation gate before publication.
+4. Validate the public allowlist and deny rules using `scripts/export-public.sh --out /tmp/sbfleet-public-check --dry-run` from a clean tracked tree. Known untracked private notes must remain excluded. Dry-run writes no candidate files.
 
-## Safe sequence
+## Later publication — explicit operator authorization required
 
-1. Finish sanitization on a private branch; run the full test and lint gates.
-2. Confirm **one semver everywhere** (`pyproject.toml`, `sbfleet --version`, CHANGELOG, release tag).
-3. Ensure the working tree is **clean** (`git status --short` empty).
-4. Run `scripts/export-public.sh --out ~/Projects/sbfleet-public-candidate` (no `--allow-dirty` for releases).
-5. Review the candidate tree and public `EXPORT_MANIFEST.json` (release version + file list only). Confirm the sibling sidecar `sbfleet-public-candidate.PRIVATE_PROVENANCE.json` records the private `source_commit` and is **not** copied into the public repository.
-6. Run `scripts/validate-public-candidate.sh` — must report zero workflow terms, zero private SHAs in the candidate, version `1.0.0`.
-7. **Operator only:** rename the private GitHub repository (for example to `sbfleet-dev-private`) so the desired public slug is free.
-8. **Operator only:** create a new empty public repository at `github.com/Pepinko81/sbfleet` (no README/license from template if the candidate already includes them).
-9. **Operator only:** `git init` in the candidate, first commit, push `main`, tag `v1.0.0` (or chosen semver), create GitHub Release.
-10. Update `pyproject.toml` `[project.urls]`, README links, `SECURITY.md`, and `sbfleet-site` `GITHUB_URL` to the public repo.
-11. Deploy the landing site static build (landing source remains private; only `dist/` is published to nginx).
+1. After installation validation and publication approval, finalize the release status/date in release-facing documentation and commit it privately. Export from that approved clean commit with `scripts/export-public.sh --out /tmp/sbfleet-public-candidate`. Never use `--allow-dirty` for a release.
+2. Review the public manifest (version and file list only). Keep its sibling private provenance sidecar outside the public repository.
+3. Run `scripts/validate-public-candidate.sh /tmp/sbfleet-public-candidate`; require zero forbidden workflow terms, private SHAs, secrets, and symlinks, and the intended release version.
+4. Commit the reviewed candidate tree into the existing public repository without importing private Git history. Preserve the public repository's own history.
+5. Publish the approved public commit, tag the matching semver, and create the GitHub Release.
 
-## Future updates
-
-Develop in the private repo → scrub → export from clean commit → commit in public repo. Never force-push private history into the public repository.
-
-## Autonomous agents
-
-This repository does **not** perform remote rename, create, push, or visibility changes without explicit operator approval.
+Website deployment and repository settings are separate operator actions. Release
+preparation alone does not authorize public export, public push, tags, releases,
+repository settings changes, or website deployment.

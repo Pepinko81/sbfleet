@@ -179,31 +179,38 @@ def _mountinfo_points() -> set[Path] | None:
     """
     try:
         text = Path("/proc/self/mountinfo").read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeError):
+        return None
+    if not text.strip():
         return None
     mounts: set[Path] = set()
     for line in text.splitlines():
         if not line.strip():
-            continue
+            return None
         parts = line.split()
         # Minimum: 6 fixed fields before optional/separator, then "-", fstype, source, super.
         # Practical floor before separator search: ID parent maj:min root mnt opts (≥6 tokens)
         # plus "-" and three trailing fields (≥10). Fail closed on short/malformed lines.
         if len(parts) < 10:
             return None
-        try:
-            int(parts[0])
-            int(parts[1])
-        except ValueError:
-            return None
-        if ":" not in parts[2]:
+        device = parts[2].split(":")
+        if len(device) != 2 or any(
+            not value.isascii() or not value.isdecimal() for value in [parts[0], parts[1], *device]
+        ):
             return None
         # Separator between optional fields and fstype/source/super options.
         try:
             sep = parts.index("-", 6)
         except ValueError:
             return None
-        if sep + 3 >= len(parts):
+        if sep + 4 != len(parts):
+            return None
+        root = _unescape_mount_field(parts[3])
+        # Namespace bind mounts expose a kernel namespace handle instead of a path.
+        namespace_root = parts[sep + 1] == "nsfs" and re.fullmatch(
+            r"(?:mnt|net|uts|ipc|pid|user|cgroup|time):\[[0-9]+\]", root
+        )
+        if not root.startswith("/") and not namespace_root:
             return None
         raw_mnt = _unescape_mount_field(parts[4])
         if not raw_mnt or not raw_mnt.startswith("/"):

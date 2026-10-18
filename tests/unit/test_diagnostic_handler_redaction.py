@@ -349,9 +349,9 @@ def test_reconcile_staging_rebind_json_reason_redacts_secret(
     record = upd.build_promote_record(
         operation_id=op_id,
         from_ref="self-hosted/v0.8.1",
-        from_sha="1" * 40,
+        from_sha=upd.up.KNOWN_REF_SHAS["self-hosted/v0.8.1"],
         to_ref="self-hosted/v0.8.2",
-        to_sha="2" * 40,
+        to_sha=upd.up.KNOWN_REF_SHAS["self-hosted/v0.8.2"],
         backup_id=backup_id,
         staging=staging,
         deployment=live,

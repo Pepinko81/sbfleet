@@ -28,7 +28,7 @@ def _rm_by_id(kind: str, resource_id: str) -> None:
         check=False,
     )
     if not result.ok:
-        detail = (result.stderr or result.stdout or "")[:200]
+        detail = result.stderr or result.stdout or ""
         raise ProjectError(f"failed to remove {kind} {resource_id}: {detail}", code=EXIT_SAFETY)
 
 

@@ -55,3 +55,9 @@ Backup-time verification uses a **minimal isolated** environment and returns `Re
 Archived `.env` is never copied wholesale. Source recovery material (JWT/Postgres/Vault/crypto keys, `POOLER_TENANT_ID`, …) is merged with destination-owned placement/authority fields (Compose selectors, ports, URLs, dashboard username). After reconciliation, Run 2A authority/Compose validation is re-run before start.
 
 `--recover` absent-project recovery remains unsupported. Default remove requires `require_recovery_backup` (usable archive + current contract evidence); `--no-backup` remains the explicit bypass.
+
+If backup/archive creation and plaintext cleanup both fail, the primary error keeps
+its exit code and journal error. Independent cleanup error and exact operation-owned
+residual path are recorded in the same journal and printed with configured-secret
+redaction. A successful encrypted archive is retained on cleanup failure; the command
+returns nonzero. Cleanup covers only this operation's staging, without secure-erase claims.

@@ -317,7 +317,10 @@ def _is_exact_missing_resource(result: Any) -> bool:
 
 
 def _docker_inspect_observation(args: list[str]) -> DockerObservation:
-    """Inspect one Docker object; distinguish ABSENT from UNKNOWN/FAILED."""
+    """Inspect one Docker object; distinguish ABSENT from UNKNOWN/FAILED.
+
+    Keep error text intact for the configured-redaction boundary before clipping.
+    """
     try:
         result = run(
             ["docker", *args],
@@ -330,7 +333,7 @@ def _docker_inspect_observation(args: list[str]) -> DockerObservation:
     if not result.ok:
         if _is_exact_missing_resource(result):
             return DockerObservation(state="ABSENT", detail="confirmed missing")
-        detail = (result.stderr or result.stdout or "docker inspect failed")[:300]
+        detail = result.stderr or result.stdout or "docker inspect failed"
         return DockerObservation(state="UNKNOWN", detail=detail)
     text = (result.stdout or "").strip()
     if not text:
@@ -360,7 +363,7 @@ def _docker_ps_filter_ids(filter_expr: str) -> DockerObservation:
     except Exception as exc:  # noqa: BLE001
         return DockerObservation(state="FAILED", detail=f"docker ps raised: {exc}")
     if not result.ok:
-        detail = (result.stderr or result.stdout or "docker ps failed")[:300]
+        detail = result.stderr or result.stdout or "docker ps failed"
         return DockerObservation(state="UNKNOWN", detail=detail)
     ids = [line.strip() for line in (result.stdout or "").splitlines() if line.strip()]
     return DockerObservation(state="PRESENT", data={"ids": ids})
@@ -377,7 +380,7 @@ def _docker_network_ls_ids(filter_expr: str) -> DockerObservation:
     except Exception as exc:  # noqa: BLE001
         return DockerObservation(state="FAILED", detail=f"docker network ls raised: {exc}")
     if not result.ok:
-        detail = (result.stderr or result.stdout or "docker network ls failed")[:300]
+        detail = result.stderr or result.stdout or "docker network ls failed"
         return DockerObservation(state="UNKNOWN", detail=detail)
     ids = [line.strip() for line in (result.stdout or "").splitlines() if line.strip()]
     return DockerObservation(state="PRESENT", data={"ids": ids})
@@ -394,7 +397,7 @@ def _docker_volume_ls_names(filter_expr: str) -> DockerObservation:
     except Exception as exc:  # noqa: BLE001
         return DockerObservation(state="FAILED", detail=f"docker volume ls raised: {exc}")
     if not result.ok:
-        detail = (result.stderr or result.stdout or "docker volume ls failed")[:300]
+        detail = result.stderr or result.stdout or "docker volume ls failed"
         return DockerObservation(state="UNKNOWN", detail=detail)
     names = [line.strip() for line in (result.stdout or "").splitlines() if line.strip()]
     return DockerObservation(state="PRESENT", data={"names": names})
@@ -508,9 +511,9 @@ def _prove_present_container(
     expected_network_canonical_id: str | None = None,
 ) -> OwnedResource:
     """Full PRESENT-container proof against the pin-derived contract."""
-    rid = str(data.get("Id") or "")
-    if not rid:
-        raise AuthorityError(f"container {resource_name}: missing Id in inspect schema")
+    rid = data.get("Id")
+    if not isinstance(rid, str) or not re.fullmatch(r"[0-9a-f]{64}", rid):
+        raise AuthorityError(f"container {resource_name}: Id must be a canonical full Docker ID")
     labels = _label_map(data.get("Config", {}).get("Labels") or data.get("Labels"))
     _prove_labels(
         labels,
@@ -632,10 +635,15 @@ def _prove_present_container(
             f"got={config_image!r} expected={svc_contract.image_ref!r}"
         )
     # Runtime image identity (Image / ImageID) is a separate fact.
-    runtime_image_id = str(data.get("Image") or cfg.get("ImageID") or data.get("ImageID") or "")
-    if not runtime_image_id:
+    # Missing primary fields may use the supported alternative schema; present
+    # malformed values must never be hidden by a truthy fallback or coercion.
+    runtime_image_id = data.get("Image", cfg.get("ImageID", data.get("ImageID")))
+    if not isinstance(runtime_image_id, str) or not re.fullmatch(
+        r"sha256:[0-9a-f]{64}", runtime_image_id
+    ):
         raise AuthorityError(
-            f"container {resource_name}: missing runtime image identity (Image/ImageID)"
+            f"container {resource_name}: missing or malformed runtime image identity "
+            "(Image/ImageID)"
         )
     if recorded_image_ids and compose_svc in recorded_image_ids:
         expected_id = recorded_image_ids[compose_svc]

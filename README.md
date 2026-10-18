@@ -1,369 +1,212 @@
 # SBfleet
 
-**Local control plane for self-hosted Supabase stacks**
+**Local control plane for self-hosted Supabase stacks.**
 
-`upstream stacks · isolated · recoverable`
+Run multiple independent self-hosted Supabase projects on one Linux host, with isolated ports and resources, upstream Studio, guarded lifecycle management, encrypted recovery, and disposable local development sandboxes.
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-SBfleet is a small Python CLI that manages **independent official self-hosted Supabase stacks** on one Linux host. It is not a Supabase fork and not a generic container orchestrator. Original Studio stays the GUI; official upstream images and tooling stay authoritative.
+## Why SBfleet
 
-SBfleet is an independent open-source project and is **not affiliated with, sponsored by, or endorsed by Supabase**. Third-party names and marks belong to their respective owners.
+Keep separate backends for your applications without maintaining a collection of ad-hoc Compose commands and port assignments. SBfleet manages an official self-hosted Supabase stack per project and keeps each project's identity, secrets, data, and lifecycle explicit.
 
----
+### Key capabilities
 
-## What is SBfleet?
-
-Running more than one self-hosted Supabase project on a single machine is awkward: port collisions, shared Compose projects, ad-hoc scripts, and fragile recovery. SBfleet turns that into an explicit local control plane:
-
-- one **official** self-hosted stack per long-lived project
-- a **filesystem registry** (no control-plane database)
-- guarded lifecycle (create / start / stop / remove)
-- **recovery-verified** cold backups and **same-pin** restore
-- a **disposable** official-CLI sandbox for app repos, kept separate from fleet projects
-
-If you want multiple local Supabase backends with clear safety boundaries—and you want to keep upstream Studio and upstream run/update scripts—SBfleet is the tool.
-
----
-
-## Why SBfleet?
-
-| Capability | What you get |
-|---|---|
-| Independent stacks | Each project owns its Compose project, ports, volumes, and secrets |
-| Original Studio | Upstream Studio via the project gateway — SBfleet does not replace the UI |
-| Filesystem registry | JSON metadata under the fleet home; no daemon, no central DB |
-| Guarded lifecycle | Mutations require identity, ownership, and lock checks |
-| Recovery-verified backup | Encrypted archives; verification is stronger than “file exists” |
-| Same-pin restore | Restore into a matching upstream pin/architecture |
-| Disposable sandbox | Pinned Supabase CLI sandboxes for app workspaces (no Cloud login/link) |
-| Explicit local safety | Loopback publish, labeled ownership, diagnostic redaction |
-
----
-
-## Screenshots
-
-![SBfleet interactive shell home](docs/assets/readme/01-terminal-home.png)
-
-![Multi-project status in the interactive shell](docs/assets/readme/02-project-status.png)
-
-![Original upstream Studio launched for a managed project](docs/assets/readme/03-studio.png)
-
-![Disposable sandbox lifecycle](docs/assets/readme/04-sandbox-lifecycle.png)
-
-
----
+- **Independent projects:** separate Compose resources, secrets, and collision-checked host port allocations.
+- **Upstream Studio:** a separate Supabase Studio for each managed project.
+- **CLI operations:** create, start, stop, inspect, connect, and diagnose projects; an interactive shell is included.
+- **Encrypted recovery:** cold backups with disposable recovery verification and same-pin restore.
+- **Explicit updates:** reviewed upstream transitions with guarded continuation after interruption.
+- **Local sandboxes:** disposable official Supabase CLI stacks for application and coding-agent workflows.
 
 ## Quick start
 
-```bash
-bash scripts/install-user.sh
-# Ensure ~/.local/bin is on PATH (new login shell, or: export PATH="$HOME/.local/bin:$PATH")
+Start on a Linux host with the [requirements](#requirements) below. Clone the public source and run the user installer:
 
+```bash
+git clone https://github.com/Pepinko81/sbfleet.git
+cd sbfleet
+export PATH="$HOME/.local/bin:$PATH"
+bash scripts/install-user.sh
+
+sbfleet --version
 sbfleet doctor
 sbfleet create myapp --yes
 sbfleet start myapp
-sbfleet studio myapp --url-only
 sbfleet status myapp
-```
-
-Interactive shell (TTY):
-
-```bash
-sbfleet
-# /create myapp
-# /status
-# /studio
-# /use --clear   # return to fleet root
-```
-
----
-
-## Installation / prerequisites
-
-**Host**
-
-- Linux (amd64 or arm64) with local Docker Engine **28+**, Compose v2 (`!override` support), and an ordinary Docker-authorized user
-- Python **3.10+** (with `venv`), Git, jq, OpenSSL, Node **≥16**
-- No root/sudo required for the SBfleet installer once Docker access exists
-
-**Operator install (durable)**
-
-```bash
-bash scripts/install-user.sh
-# Optional: bash scripts/install-user.sh --configure-path   # append ~/.local/bin to ~/.profile
-```
-
-This installs a non-editable package under `~/.local/lib/sbfleet/current/` (transactional staging promoted via the `current` symlink), places **only** `~/.local/bin/sbfleet` for PATH discovery, and provisions managed tools under that generation (invoked by absolute path; not published as `~/.local/bin/age` / `supabase`). Artifact SHA256 pins live in [`packaging/tool-pins.toml`](packaging/tool-pins.toml). Downloaded Supabase CLI and age binaries are third-party software under their own licenses — see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
-
-**Verify**
-
-```bash
-# Current shell may need ~/.local/bin first:
-export PATH="$HOME/.local/bin:$PATH"
-
-env -i HOME="$HOME" USER="$USER" PATH="/usr/bin:/bin:$HOME/.local/bin" \
-  /bin/sh -c 'command -v sbfleet && sbfleet --version && sbfleet doctor'
-```
-
-Installer reports **INSTALLATION ARTIFACTS READY** separately from **CURRENT SHELL** availability. **FULL V1 READY** requires artifact planes (**SBFLEET CLI**, **DOCKER**, **BACKUP**, **SANDBOX**) **and** the current shell being able to resolve `sbfleet`. If artifacts are ready but this shell’s PATH lacks `~/.local/bin`, the installer prints `CURRENT SHELL sbfleet: PENDING` with the exact `export PATH=…` action — not an unqualified FULL V1 READY. Exit code `4` if incomplete.
-
-**Upgrade / uninstall**
-
-```bash
-bash scripts/install-user.sh          # transactional stage → verify → promote
-bash scripts/uninstall-user.sh        # removes managed software + sbfleet shim only
-```
-
-Uninstall never deletes fleet data (`~/.local/share/sbfleet`), Docker resources, or unrelated binaries.
-
-**Development / repository gates only**
-
-```bash
-bash scripts/ensure-dev-env.sh
-# Use .venv/bin/python / .venv/bin/sbfleet so site-packages cannot shadow this checkout
-```
-
-Upstream pin for official projects: **`self-hosted/v0.8.2`** (`564eab8ad7840b13324f68b1bfac074ef8d51c21`). Details: [`docs/UPSTREAM_SUPABASE_REFERENCE.md`](docs/UPSTREAM_SUPABASE_REFERENCE.md).
-
----
-
-## Connect your application
-
-1. SBfleet assigns **project-specific host ports** automatically (collision-free loopback).
-2. Do **not** hardcode host PostgreSQL port `5432` — that is the container-internal port.
-3. Use `sbfleet connection PROJECT` as the source of truth (do not scrape `docker ps`).
-4. Host-run migrations/apps: `sbfleet env PROJECT --admin -- COMMAND`.
-5. **Host applications:** supported via `127.0.0.1:<allocated port>`.
-6. **Applications in other Docker containers:** **not supported in V1** (loopback-only publish).
-7. **Remote PostgreSQL access:** **not supported by default**.
-
----
-
-## First project workflow
-
-```bash
-sbfleet create myapp --yes
-sbfleet start myapp
-sbfleet status myapp
-sbfleet studio myapp --url-only
 sbfleet connection myapp
-sbfleet stop myapp
+sbfleet studio myapp --url-only
 ```
 
-`create` materializes an official standard-profile stack. `start` / `stop` are idempotent under project locks. Direct CLI always requires an explicit project slug; the interactive shell may use `/use <slug>` for session-only selection (`/use --clear` returns to fleet root).
+Resolve any readiness failures before creating a project. The public clone installs the current release, **1.0.1**.
 
----
-
-## Common commands
+Before your first backup, configure an age recipient in `fleet.json` and keep the corresponding private identity securely backed up outside the fleet data directory. See [backup setup](docs/OPERATIONS.md#backup-and-restore). With your identity file in place:
 
 ```bash
-sbfleet projects [--json]
-sbfleet status P [--json]
-sbfleet start P [--timeout SECONDS]
-sbfleet stop P
-sbfleet restart P [--timeout SECONDS]
-sbfleet logs P [SERVICE] [--follow] [--tail N]
-sbfleet doctor [P] [--sandbox PATH] [--json]
-sbfleet configure P [--name TEXT] [--organization-name TEXT] [--studio-project TEXT]
-sbfleet connection P [--json] [--oauth-setup]
-sbfleet secrets P [--reveal] [--keys K1,K2]
-sbfleet env (--admin | --credentials-file FILE) [--service-role] P -- COMMAND …
-sbfleet remove P --yes [--no-backup]
-sbfleet update P --to REF [--dry-run] [--yes] [--identity PATH]
-sbfleet update P --reconcile --operation-id UUID --yes
-sbfleet nginx generate P [--json]
-sbfleet nginx validate P
-sbfleet nginx install
+sbfleet backup myapp --identity /secure/backup.agekey
 ```
 
-Full contracts: [`docs/CLI_REFERENCE.md`](docs/CLI_REFERENCE.md), [`docs/COMMAND_SPEC.md`](docs/COMMAND_SPEC.md).
+Backup verification is enabled by default and requires downtime. Replace the example identity path with your own.
 
----
+## Example workflow
+
+```bash
+sbfleet projects
+sbfleet logs myapp auth --tail 100
+sbfleet doctor myapp
+sbfleet stop myapp
+sbfleet start myapp
+```
+
+Run `sbfleet` in a terminal for the interactive shell. Use `/use myapp` to select a project for that session, `/status` to inspect it, and `/use --clear` to return to the fleet root. Direct CLI commands use explicit project slugs.
+
+For host applications, get allocated endpoints from `sbfleet connection myapp`; never assume host PostgreSQL is on port `5432`. Use an application-owned least-privilege role for runtime access. The explicit admin environment helper is available for operator-run migrations; see the [CLI reference](docs/CLI_REFERENCE.md).
+
+## Multiple isolated projects
+
+```bash
+sbfleet create orders --yes
+sbfleet create inventory --yes
+sbfleet start orders
+sbfleet start inventory
+sbfleet projects
+sbfleet connection orders
+sbfleet connection inventory
+```
+
+Each project has its own Compose identity, data, secrets, and reserved host ports. Published ports bind to loopback by default. Capacity depends on host resources; there is no fixed project-count limit. This is operational isolation for a trusted local operator, not hostile multi-tenant isolation.
+
+See [network and ports](docs/NETWORK_AND_PORTS.md) and [project lifecycle](docs/PROJECT_LIFECYCLE.md).
 
 ## Studio
 
-SBfleet opens the **original** Supabase Studio for a project gateway URL.
+SBfleet launches **upstream Supabase Studio** through each project's gateway. It does not replace or rebrand Studio.
 
 ```bash
-sbfleet studio myapp              # open when reachable
-sbfleet studio myapp --url-only   # print URL only
-sbfleet studio myapp --local      # prefer loopback URL
-```
-
-Change Studio organization/project display names (and the fleet display name) without editing `.env` by hand. This does **not** rename the SBfleet slug:
-
-```bash
-sbfleet configure myapp \
-  --name "Orders App" \
-  --organization-name "Acme" \
-  --studio-project "Orders"
-# if the stack is running, apply Studio Env with:
-sbfleet stop myapp && sbfleet start myapp
-```
-
-Plain `restart` does not refresh container environment. See [`docs/CLI_REFERENCE.md`](docs/CLI_REFERENCE.md).
-
-Studio uses HTTP Basic Auth from the project `.env`. Reveal credentials deliberately:
-
-```bash
+sbfleet studio myapp
 sbfleet secrets myapp --reveal --keys DASHBOARD_USERNAME,DASHBOARD_PASSWORD
 ```
 
-Stopped projects refuse open-with-browser flows and print how to start. See [`docs/STUDIO_AND_NGINX.md`](docs/STUDIO_AND_NGINX.md).
+The second command deliberately reveals the project's HTTP Basic Auth credentials. Over SSH, arrange your own port forwarding to reach the server's loopback URL.
 
----
+Use `sbfleet configure myapp --name "My App" --studio-project "My App"` to change display names without changing the project slug. Apply Studio environment changes with a guarded stop followed by start; plain restart does not refresh container environment. See [Studio and nginx](docs/STUDIO_AND_NGINX.md).
 
-## Backup and restore
+## Backup and recovery
 
-Configure `age_recipients` (or `backup_recipients`) in `fleet.json` first.
+The bounded important-data recovery contract covers the supported standard profile with file-backed Storage: clean-shutdown PostgreSQL cluster data, database configuration and cryptographic keys, Storage bytes, and deployment configuration including functions and snippets. Recovery verification checks the restored data against snapshot-bound source facts; an archive's existence alone is not recovery proof.
 
 ```bash
-sbfleet backup myapp                  # --verify on by default
-sbfleet backup myapp --identity FILE
-sbfleet restore myapp ARCHIVE.age --yes [--identity FILE]
+sbfleet backup myapp --identity /secure/backup.agekey
+sbfleet restore myapp /path/to/archive.tar.age --yes --identity /secure/backup.agekey
 ```
 
-Backups are **cold**, encrypted archives that include PostgreSQL cluster data, Storage bytes, and configuration needed for recovery. Archive existence alone is not recovery proof—verification is part of the backup path. Restore is **same-pin / same-architecture**; it is not generic cross-version rollback. Details: [`docs/BACKUP_RESTORE.md`](docs/BACKUP_RESTORE.md), [`docs/UPDATE_STRATEGY.md`](docs/UPDATE_STRATEGY.md).
+Restore targets the **same project, exact upstream pin, and compatible architecture/image set**. The requested archive is recovery-verified before target mutation. Keep off-host copies and recovery identities, and validate your own recovery procedure before entrusting important data.
 
----
+Cold backups require downtime. PITR, arbitrary S3 recovery, external tablespaces, absent-project recovery, and generic cross-version rollback are unsupported. Cleanup failures report residuals and return nonzero while retaining a successfully created encrypted archive.
 
-## Disposable sandbox workflow
+Read the [backup and restore contract](docs/BACKUP_RESTORE.md). Updates follow reviewed directed edges only; interrupted updates use the original operation's `--reconcile` flow, with evidence checks. See [update strategy](docs/UPDATE_STRATEGY.md).
 
-Pinned Supabase CLI **2.118.0** only. No Cloud login or link. App repo `supabase/config.toml` must use a `project_id` starting with `sbfleet-dev-`.
+## Development sandbox and coding agents
+
+A sandbox is a disposable, local-only official Supabase CLI stack associated with an application repository. It is separate from long-lived fleet projects and requires no Cloud login or link.
+
+Initialize a fresh application repository using the installer-managed CLI:
 
 ```bash
 cd ~/my-app
-supabase init
-# Set project_id = "sbfleet-dev-<unique>" in supabase/config.toml
+"$HOME/.local/lib/sbfleet/current/tools/supabase/2.118.0/supabase" init
+# Edit supabase/config.toml: set project_id to a unique "sbfleet-dev-..." value.
 
 sbfleet sandbox start .
-sbfleet sandbox status . [--json]
+sbfleet sandbox status .
 sbfleet sandbox studio .
-sbfleet sandbox env . -- bun run db:migrate
 sbfleet sandbox reset . --yes
 sbfleet sandbox destroy . --yes
 ```
 
-Sandboxes are **not** fleet projects. See [`docs/DEV_SANDBOX.md`](docs/DEV_SANDBOX.md).
+Use an existing initialized config without overwriting it. Reset is destructive to local sandbox data; destroy removes owned sandbox resources and preserves application source. Configure distinct app-local ports if running several sandboxes.
 
----
+Give coding agents access only to disposable development data. The wrapper checks local endpoints, configuration, credentials, and resource ownership, but same-user filesystem or Docker access can bypass it. A dedicated development OS user or VM with its own Docker daemon provides a stronger boundary. See [sandbox workflows](docs/DEV_SANDBOX.md) for SQL and external migration modes and guarded child-command environments.
 
-## Architecture overview
+## Architecture and design
 
-```text
-Developer / automation
-        │
-        ▼
-     SBfleet CLI
-    /     |      \
-project A  project B  sandbox
-   │          │          │
-official   official   official CLI
-stack +    stack +    disposable
-Studio     Studio     stack
-```
+SBfleet is a Python CLI with one process per invocation, a filesystem registry, and per-project locks. It has **no daemon, control-plane database, or custom Studio**. Fleet data defaults to `~/.local/share/sbfleet`, independently of the installed software.
 
-- One process per invocation — no fleet daemon
-- Filesystem registry + per-project locks under the fleet home
-- Official `run.sh` for routine lifecycle; staged official `update.sh` for reviewed transitions
-- Compose port `!override`, loopback publish, Realtime DNS alias preserved
-- Optional host nginx templates; TLS remains operator-owned
-
-Authoritative design: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/PRODUCT.md`](docs/PRODUCT.md).
-
----
+Projects use pinned official self-hosted Supabase stacks. Routine lifecycle uses upstream `run.sh`; reviewed updates stage upstream `update.sh` before promotion. The current default pin is `self-hosted/v0.8.2`. See [architecture](docs/ARCHITECTURE.md) and [upstream reference](docs/UPSTREAM_SUPABASE_REFERENCE.md).
 
 ## Safety model
 
-- No public DB/pooler ports; project and sandbox bindings are loopback-only
-- No project mutation without identity, lock, ownership, and config validation
-- Secrets stay out of ordinary logs and Git; diagnostic output is redacted
-- No running PGDATA tar; cold backup + recovery verification
-- No update without a recovery-verified backup and known compatibility
-- Sandbox allowlist + dotenv checks; no Cloud login/link/`--linked`
-- No broad Docker prune or delete-by-name-resemblance
+- Mutations require identity, ownership, configuration, and lock checks; unknown authority fails closed.
+- Ordinary diagnostic output redacts configured secrets; explicit reveal and child-command output require operator care.
+- Default removal requires a usable recovery-verified archive; bypassing backup is an explicit operator choice.
+- Updates require a recovery-verified backup and a reviewed transition; no implicit latest or automatic downgrade.
+- Cleanup targets proven-owned resources. SBfleet performs no global Docker prune or broad name-based deletion.
 
-See [`docs/SECRETS_AND_SECURITY.md`](docs/SECRETS_AND_SECURITY.md) and [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
+The threat model trusts the local operator. See [secrets and security](docs/SECRETS_AND_SECURITY.md) and [security reporting](SECURITY.md).
 
----
+## Supported boundaries
 
-## What SBfleet deliberately does NOT do
+- One Linux host with local Docker Engine; no multi-host orchestration, Kubernetes, or managed cloud service.
+- Host applications connect through allocated loopback ports. Applications in other Docker containers and universal remote database exposure are not supported.
+- nginx templates are optional; DNS, certificates, TLS deployment, and privileged installation remain operator responsibilities.
+- Signup email/SMS delivery needs real provider configuration. See [self-hosted OAuth](docs/SELF_HOSTED_OAUTH.md) for authentication setup.
+- macOS, Windows, remote Docker, and Podman are not first-class supported hosts.
 
-- Fork Supabase or ship a custom Studio/frontend/API server
-- Run a control-plane database or always-on daemon
-- Impose a hard project count cap (capacity is host resources)
-- Automate TLS certificates, DNS, or privileged nginx installation
-- Offer generic cross-version database rollback
-- Treat same-user sandboxing as hostile multi-tenant isolation
-- Support Mac/Windows hosts, remote Docker, or Podman as first-class V1 targets
+## Screenshots
 
----
+**Interactive shell**
 
-## Current V1 limitations
+![SBfleet terminal home](docs/assets/readme/01-terminal-home.png)
 
-V1 is suitable for **local development**, disposable workloads, and **controlled operator evaluation**. Important-data acceptance remains intentionally conservative while the remaining bounded recovery backlog is completed.
+**Project status**
 
-Also note:
+![SBfleet project status](docs/assets/readme/02-project-status.png)
 
-- Linux + local Docker Engine; no implicit sudo
-- Cold backups require downtime
-- Updates follow reviewed pin edges only; interrupted work uses `--reconcile`, not blind restore
-- `nginx install` prints instructions — it does not install host packages or provision TLS
-- Signup email/SMS delivery stays disabled until real SMTP/phone is configured
+**Upstream Supabase Studio launched per managed project**
 
----
+![Upstream Supabase Studio](docs/assets/readme/03-studio.png)
+
+**Disposable sandbox lifecycle**
+
+![SBfleet sandbox lifecycle](docs/assets/readme/04-sandbox-lifecycle.png)
 
 ## Documentation
 
-| Doc | Topic |
-|---|---|
-| [`docs/CLI_REFERENCE.md`](docs/CLI_REFERENCE.md) | Operator command manual |
-| [`docs/COMMAND_SPEC.md`](docs/COMMAND_SPEC.md) | Exit codes and contracts |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System design |
-| [`docs/OPERATIONS.md`](docs/OPERATIONS.md) | Day-2 operations |
-| [`docs/BACKUP_RESTORE.md`](docs/BACKUP_RESTORE.md) | Backup / restore |
-| [`docs/UPDATE_STRATEGY.md`](docs/UPDATE_STRATEGY.md) | Staged updates |
-| [`docs/DEV_SANDBOX.md`](docs/DEV_SANDBOX.md) | Disposable CLI sandbox |
-| [`docs/STUDIO_AND_NGINX.md`](docs/STUDIO_AND_NGINX.md) | Studio + nginx templates |
-| [`docs/SECRETS_AND_SECURITY.md`](docs/SECRETS_AND_SECURITY.md) | Secrets model |
-| [`docs/TESTING_STRATEGY.md`](docs/TESTING_STRATEGY.md) | Test gates G0–G11 |
-| [`docs/QUALITY_AND_SECURITY.md`](docs/QUALITY_AND_SECURITY.md) | Product guarantees |
-| [`docs/UPSTREAM_SUPABASE_REFERENCE.md`](docs/UPSTREAM_SUPABASE_REFERENCE.md) | Official pin |
-| [`SECURITY.md`](SECURITY.md) | Vulnerability reporting |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Contributor setup |
-| [`CHANGELOG.md`](CHANGELOG.md) | Release history |
-| [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) | Upstream licenses |
+- [CLI reference](docs/CLI_REFERENCE.md) and [command contracts](docs/COMMAND_SPEC.md)
+- [Operations](docs/OPERATIONS.md), [backup and restore](docs/BACKUP_RESTORE.md), [updates](docs/UPDATE_STRATEGY.md)
+- [Development sandboxes](docs/DEV_SANDBOX.md), [Studio and nginx](docs/STUDIO_AND_NGINX.md)
+- [Architecture](docs/ARCHITECTURE.md), [security model](docs/SECRETS_AND_SECURITY.md), [quality boundaries](docs/QUALITY_AND_SECURITY.md)
+- [Contributing](CONTRIBUTING.md), [testing](docs/TESTING_STRATEGY.md), [changelog](CHANGELOG.md)
 
-Where README simplification differs from those docs, **the detailed docs win**.
+## Requirements
 
----
+- Linux **amd64 or arm64**, local Docker Engine **28+**, Compose v2 with `!override` support, and a Docker-authorized user.
+- Python **3.10+** with `venv`, Git, sh/coreutils, jq, OpenSSL, and Node **16+**.
+- Enough memory and disk for each full Supabase stack, backup staging, and recovery verification.
 
-## Development / testing
+The user installer provisions pinned Supabase CLI **2.118.0** and age **1.3.2** with committed SHA256 checks. See [tool pins](packaging/tool-pins.toml) and [third-party notices](THIRD_PARTY_NOTICES.md).
+
+## Installation and uninstall
+
+From the source checkout, `bash scripts/install-user.sh` installs a non-editable package under `~/.local/lib/sbfleet/current/` and exposes `~/.local/bin/sbfleet`. Managed helper tools remain private to that installation. No sudo is needed once Docker access exists.
+
+Re-run the installer from the desired source version to upgrade. It stages and verifies a generation before promotion. `--configure-path` optionally adds `~/.local/bin` to `~/.profile`; an existing shell may still need the PATH export shown above. Installer output distinguishes installed artifacts from current-shell readiness; incomplete readiness exits with code 4.
 
 ```bash
-.venv/bin/python -m pip install -e '.[dev]'
-.venv/bin/ruff check src tests
-.venv/bin/ruff format --check src tests
-.venv/bin/pytest
-.venv/bin/python -m build
+bash scripts/uninstall-user.sh
 ```
 
-Docker-marked and sandbox-marked tests need the matching host tools. Never point destructive tests at non-owned projects.
-
----
+Uninstall removes managed software and the SBfleet shim. It preserves fleet data, Docker resources, and unrelated binaries. Contributor setup is documented in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Project status
 
-SBfleet **1.0.0** is the first public release for local multi-project Supabase control: create/list/status/start/stop, original Studio, disposable sandbox lifecycle, and same-pin backup/restore are implemented with an explicit safety model.
+SBfleet **1.0.1** is a patch release focused on reliability and safety checks. It adds no new product features. See the [1.0.1 release notes](CHANGELOG.md#101--2026-10-18). Fresh installation, reinstall, uninstall/reinstall, the 1.0.0 upgrade path, and production installation validation passed without managed project or registry mutation.
 
-Assurance for important-data production use remains conservative by design. That is an assurance boundary, not “missing core CLI.”
+## Independence
 
----
+SBfleet is an independent open-source project and is **not affiliated with, sponsored by, or endorsed by Supabase**. Third-party names and marks belong to their respective owners.
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE).
-
-SBfleet is an independent open-source tool. It is **not affiliated with, sponsored by, or endorsed by Supabase**; compatibility with official self-hosted Supabase is intentional.
+[MIT](LICENSE). Upstream software retains its own licenses; see [third-party notices](THIRD_PARTY_NOTICES.md).

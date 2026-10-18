@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sbfleet"
-version = "1.0.0"
+version = "1.0.1"
 description = "Small CLI for multiple official self-hosted Supabase projects on one Linux host"
 readme = "README.md"
 requires-python = ">=3.10"

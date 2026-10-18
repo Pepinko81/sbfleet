@@ -399,7 +399,18 @@ sbfleet restore myapp ~/backups/….tar.age --yes --identity ~/.config/sbfleet/i
 | Destructive | Maintenance; creates pre-update recovery backup when applying a non-noop transition |
 | Confirmation | `--yes` required to apply or reconcile |
 | JSON | `--dry-run` prints the plan JSON on stdout (there is **no** separate `--json` flag). Reconcile/diagnosis paths may also emit JSON on stdout/stderr. |
-| Note | No automatic irreversible-migration rollback — restore the pre-update backup. Directed `REVIEWED_TRANSITIONS` only. |
+| Note | No automatic rollback or cross-pin restore; a pre-update archive cannot be restored into a promoted different-pin destination. Directed `REVIEWED_TRANSITIONS` only. |
+
+
+Reconcile requires the canonical regular `staging/update-<operation_id>/promote-record.json`,
+its original operation/backup/edge identity, and the complete original staged target.
+Only that validated record is excluded from upstream byte comparison; arbitrary extra
+files still refuse. Missing/replaced live paths refuse (a planned addition still absent
+is an exact-source state). No-promotion and partial-promotion states resume only
+exact-source paths. Complete promotion and runtime-verified/journal-incomplete states
+also rebind staging and rerun runtime verification before advancing `last_verified_upstream`.
+Missing or invalid evidence remains a nonzero refusal with retained staging and journal;
+there is no new plan, backup, edge, operation identity, or generic rollback.
 
 `--to` and `--reconcile` are mutually exclusive. `--reconcile` requires `--operation-id` and `--yes`; it does **not** support `--dry-run`. Without `--to` or `--reconcile`, update refuses (exit `5`).
 

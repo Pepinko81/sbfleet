@@ -1,8 +1,8 @@
 {
   "format_version": 1,
   "product": "sbfleet",
-  "release_version": "1.0.0",
-  "exported_at_utc": "2026-10-06T19:04:57+00:00",
+  "release_version": "1.0.1",
+  "exported_at_utc": "2026-10-18T08:28:50+00:00",
   "file_count": 169,
   "files": [
     ".gitignore",

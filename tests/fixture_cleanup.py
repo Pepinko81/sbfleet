@@ -11,15 +11,6 @@ from pathlib import Path
 
 from sbfleet.process import run
 
-_FMT_CTR = (
-    '{{index .Config.Labels "io.sbfleet.fleet"}}|'
-    '{{index .Config.Labels "io.sbfleet.project"}}|{{.Id}}'
-)
-# fmt: off
-_FMT_NET = '{{index .Labels "io.sbfleet.fleet"}}|{{index .Labels "io.sbfleet.project"}}|{{.Id}}'  # noqa: E501
-_FMT_VOL = '{{index .Labels "io.sbfleet.fleet"}}|{{index .Labels "io.sbfleet.project"}}|{{.Name}}'  # noqa: E501
-# fmt: on
-
 
 def _docker(argv: list[str], *, timeout: float = 60.0):
     return run(
@@ -30,106 +21,67 @@ def _docker(argv: list[str], *, timeout: float = 60.0):
     )
 
 
-def cleanup_labeled_fleet_resources(
-    *,
-    fleet_id: str,
-    project_id: str | None = None,
-) -> list[str]:
-    """Best-effort exact cleanup of io.sbfleet.* labeled resources for a fixture.
+def _enumerate_owned(labels: dict[str, str]) -> tuple[dict[str, list[str]], list[str]]:
+    filters = [arg for key, value in labels.items() for arg in ("--filter", f"label={key}={value}")]
+    resources = {}
+    errors = []
+    for kind, command in (
+        ("container", ["ps", "-aq", "--no-trunc"]),
+        ("network", ["network", "ls", "-q", "--no-trunc"]),
+        ("volume", ["volume", "ls", "-q"]),
+    ):
+        result = _docker(["docker", *command, *filters])
+        resources[kind] = result.stdout.split() if result.ok else []
+        if not result.ok:
+            errors.append(f"enumeration-failed:{kind}")
+    return resources, errors
 
-    Returns residual descriptors still present after cleanup attempts.
-    """
-    residuals: list[str] = []
-    filters = [f"label=io.sbfleet.fleet={fleet_id}"]
-    if project_id:
-        filters.append(f"label=io.sbfleet.project={project_id}")
 
-    cf: list[str] = []
-    for f in filters:
-        cf.extend(["--filter", f])
-
-    listed = _docker(["docker", "ps", "-aq", *cf])
-    ids = [x for x in (listed.stdout or "").split() if x]
-    for cid in ids:
-        insp = _docker(["docker", "inspect", "--format", _FMT_CTR, cid])
-        parts = (insp.stdout or "").strip().split("|")
-        if len(parts) < 3 or parts[0] != fleet_id:
-            residuals.append(f"skip-unproven-container:{cid[:12]}")
-            continue
-        if project_id and parts[1] != project_id:
-            residuals.append(f"skip-other-project-container:{cid[:12]}")
-            continue
-        _docker(["docker", "rm", "-f", cid])
-
-    listed = _docker(["docker", "network", "ls", "-q", *cf])
-    nids = [x for x in (listed.stdout or "").split() if x]
-    for nid in nids:
-        insp = _docker(["docker", "network", "inspect", "--format", _FMT_NET, nid])
-        parts = (insp.stdout or "").strip().split("|")
-        if len(parts) < 3 or parts[0] != fleet_id:
-            residuals.append(f"skip-unproven-network:{nid[:12]}")
-            continue
-        if project_id and parts[1] != project_id:
-            residuals.append(f"skip-other-project-network:{nid[:12]}")
-            continue
-        _docker(["docker", "network", "rm", nid])
-
-    listed = _docker(["docker", "volume", "ls", "-q", *cf])
-    vnames = [x for x in (listed.stdout or "").split() if x]
-    for vname in vnames:
-        insp = _docker(["docker", "volume", "inspect", "--format", _FMT_VOL, vname])
-        parts = (insp.stdout or "").strip().split("|")
-        if len(parts) < 3 or parts[0] != fleet_id:
-            residuals.append(f"skip-unproven-volume:{vname}")
-            continue
-        if project_id and parts[1] != project_id:
-            if not str(parts[1] or "").startswith("rv-"):
-                residuals.append(f"skip-other-project-volume:{vname}")
+def _cleanup_owned(labels: dict[str, str]) -> list[str]:
+    resources, errors = _enumerate_owned(labels)
+    for kind, identifiers in resources.items():
+        for identifier in identifiers:
+            label_path = ".Config.Labels" if kind == "container" else ".Labels"
+            fmt = "|".join("{{index " + label_path + ' "' + key + '"}}' for key in labels)
+            inspected = _docker(["docker", kind, "inspect", "--format", fmt, identifier])
+            if not inspected.ok or inspected.stdout.strip().split("|") != list(labels.values()):
+                errors.append(f"skip-unproven-{kind}:{identifier}")
                 continue
-        rm = _docker(["docker", "volume", "rm", vname])
-        if not rm.ok:
-            residuals.append(f"volume-rm-failed:{vname}")
+            command = ["docker", kind, "rm"]
+            if kind == "container":
+                command.append("-f")
+            removed = _docker([*command, identifier])
+            if not removed.ok:
+                errors.append(f"remove-failed:{kind}:{identifier}")
+    remaining, final_errors = _enumerate_owned(labels)
+    errors.extend(final_errors)
+    errors.extend(
+        f"residual:{kind}:{identifier}" for kind, ids in remaining.items() for identifier in ids
+    )
+    return errors
 
-    return residuals
+
+def cleanup_compose_resources(project: str) -> None:
+    """Require successful cleanup and final enumeration for one exact Compose fixture."""
+    errors = _cleanup_owned({"com.docker.compose.project": project})
+    assert not errors, f"Compose fixture cleanup failed for {project}: {errors}"
+
+
+def cleanup_labeled_fleet_resources(*, fleet_id: str, project_id: str | None = None) -> list[str]:
+    """Return every cleanup failure and exact residual; callers must assert success."""
+    labels = {"io.sbfleet.fleet": fleet_id}
+    if project_id:
+        labels["io.sbfleet.project"] = project_id
+    return _cleanup_owned(labels)
 
 
 def assert_labeled_absent(*, fleet_id: str, project_id: str | None = None) -> None:
-    """Assert no fleet/project labeled containers/networks/volumes remain."""
-    filters = [f"label=io.sbfleet.fleet={fleet_id}"]
+    labels = {"io.sbfleet.fleet": fleet_id}
     if project_id:
-        filters.append(f"label=io.sbfleet.project={project_id}")
-    cf: list[str] = []
-    for f in filters:
-        cf.extend(["--filter", f])
-    for kind, argv in (
-        ("container", ["docker", "ps", "-aq", *cf]),
-        ("network", ["docker", "network", "ls", "-q", *cf]),
-        ("volume", ["docker", "volume", "ls", "-q", *cf]),
-    ):
-        listed = _docker(argv)
-        left = [x for x in (listed.stdout or "").split() if x]
-        if project_id is None:
-            assert not left, f"residual {kind}s for fleet {fleet_id}: {left}"
-            continue
-        if kind == "volume":
-            exact = []
-            for vname in left:
-                insp = _docker(
-                    [
-                        "docker",
-                        "volume",
-                        "inspect",
-                        "--format",
-                        '{{index .Labels "io.sbfleet.project"}}',
-                        vname,
-                    ]
-                )
-                pl = (insp.stdout or "").strip()
-                if pl == project_id:
-                    exact.append(vname)
-            assert not exact, f"residual volumes for project {project_id}: {exact}"
-        else:
-            assert not left, f"residual {kind}s for project {project_id}: {left}"
+        labels["io.sbfleet.project"] = project_id
+    resources, errors = _enumerate_owned(labels)
+    assert not errors, f"Cannot establish fixture absence: {errors}"
+    assert not any(resources.values()), f"Residual fixture resources: {resources}"
 
 
 def wipe_fixture_filesystem(root: Path) -> None:

@@ -31,7 +31,7 @@ def test_version() -> None:
         check=False,
     )
     assert proc.returncode == 0
-    assert "1.0.0" in proc.stdout
+    assert "1.0.1" in proc.stdout
 
 
 def test_unknown_command_exit_2() -> None:

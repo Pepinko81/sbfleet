@@ -7,7 +7,7 @@
 `update P --to self-hosted/vX.Y.Z --dry-run` is a plan; without --dry-run it is a maintenance operation requiring --yes or interactive acknowledgement. No implicit latest, background updates, downgrades, arbitrary branches or unreviewed PostgreSQL major upgrades. Same verified ref is a validated no-op.
 
 **Recovery after interruption is phase-dependent:**
-- **No promotion began** (promote-record present; live still exact source): unresolved journal still blocks ordinary restore/update; after explicit `--reconcile` / journal resolution, same-pin restore of the pre-update archive may apply while destination pin still matches the archive.
+- **No promotion began** (promote-record present; live still exact source): unresolved journal still blocks ordinary restore/update; `--reconcile` continues forward to the original target; it does not clear the journal to enable source-pin restore. Same-pin restore requires an independently compatible destination and no unresolved maintenance journal.
 - **Partial / complete promotion** (mixed or target tree; metadata may already show target pin): pre-update archive remains valuable evidence/data protection; **direct same-pin restore into a promoted different-pin destination is unsupported**; use `--reconcile` when staging can be rebound to the approved target; otherwise diagnose-only. sbfleet does **not** claim generic cross-version rollback.
 - Do **not** advise blind “retry update” or “restore pre-update backup” while gates necessarily refuse those operations.
 
@@ -35,3 +35,14 @@ Make a private **configuration-only** staging tree, no live data bind directorie
 Any merge, secret, pin, port, pull or health failure is nonzero. Leave gateway stopped on failed new runtime verification; retain journal, promote-record, encrypted old config, backup ID and version discrepancy. Do not retry blindly, regenerate keys or downgrade DB images. doctor identifies staged vs applied vs last verified refs and points at `update --reconcile --operation-id`. Reconcile continues the same operation from the canonical promote-record (no new backup/replan). Same-pin restore of the pre-update archive applies only while destination pin still matches; after promotion that path is unsupported. Irreversible data/service migrations have no automatic rollback promise.
 
 Unit/process tests cover dry-run exit-0 conflicts, upstream exit 2, missing/new secret defaults, mutated tags, .dist, backup failure, partial promotion / SIGKILL promote-record durability, pull failure and post-start health failure. Real update acceptance uses two compatible official pins or a same-ref no-op plus fault injections; record exactly which was exercised, never call no-op a real version transition. If a second supported official target is unavailable, the transition gate remains WAITING_EXTERNAL.
+
+
+Reconcile requires the canonical regular `staging/update-<operation_id>/promote-record.json`,
+its original operation/backup/edge identity, and the complete original staged target.
+Only that validated record is excluded from upstream byte comparison; arbitrary extra
+files still refuse. Missing/replaced live paths refuse (a planned addition still absent
+is an exact-source state). No-promotion and partial-promotion states resume only
+exact-source paths. Complete promotion and runtime-verified/journal-incomplete states
+also rebind staging and rerun runtime verification before advancing `last_verified_upstream`.
+Missing or invalid evidence remains a nonzero refusal with retained staging and journal;
+there is no new plan, backup, edge, operation identity, or generic rollback.

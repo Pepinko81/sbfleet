@@ -1397,8 +1397,12 @@ def _create_backup_locked(
                     )
                     restart_ok = True
                 except ProjectError as exc:
+                    from sbfleet.process import sanitize_configured_diagnostic
+
                     restart_ok = False
-                    restart_error = str(exc)
+                    restart_error = sanitize_configured_diagnostic(
+                        str(exc), deployment=deployment, max_len=500
+                    )
             elif prior_state == "STOPPED":
                 restart_ok = None  # left stopped
 
@@ -1444,8 +1448,28 @@ def _create_backup_locked(
             try:
                 _wipe_staging(staging)
             except Exception as wipe_exc:  # noqa: BLE001
-                residual = str(staging)
-                detail = str(wipe_exc)[:200]
+                from sbfleet.process import sanitize_configured_diagnostic
+
+                residual = sanitize_configured_diagnostic(str(staging), deployment=deployment)
+                detail = sanitize_configured_diagnostic(
+                    str(wipe_exc), deployment=deployment, max_len=500
+                )
+                # Independent evidence survives even when no result was produced.
+                _phase(
+                    ctx,
+                    "plaintext_cleanup_failed",
+                    nest_key=nest_key,
+                    evidence={
+                        "cleanup_ok": False,
+                        "cleanup_residuals": [residual],
+                        "cleanup_error": detail,
+                    },
+                )
+                if not result_box:
+                    print(
+                        f"error: plaintext cleanup failed: {detail}; residual: {residual}",
+                        file=sys.stderr,
+                    )
                 if result_box:
                     result_box[0].cleanup_ok = False
                     result_box[0].cleanup_residuals = [residual, detail]
@@ -1510,14 +1534,22 @@ def create_backup(
                 f"(verification={result.verification}; recovery_verified={recovery})"
             )
             print(f"archive {result.archive_path}")
+            if not result.cleanup_ok:
+                from sbfleet.process import sanitize_configured_diagnostic
+
+                print(
+                    sanitize_configured_diagnostic(
+                        "error: backup archive preserved but plaintext cleanup failed; residuals: "
+                        + ", ".join(result.cleanup_residuals),
+                        deployment=ctx.deployment,
+                    ),
+                    file=sys.stderr,
+                )
             if result.prior_state == "HEALTHY":
                 if result.restart_ok:
                     print("prior state restored: HEALTHY")
                 elif result.restart_ok is False:
-                    print(
-                        f"backup verified but restart failed: {result.restart_error}",
-                        file=sys.stderr,
-                    )
+                    _err(BackupError(f"backup verified but restart failed: {result.restart_error}"))
                     auth.complete_operation(
                         ctx,
                         phase="completed",
@@ -1540,11 +1572,6 @@ def create_backup(
                 evidence["cleanup_residuals"] = list(result.cleanup_residuals)
             auth.complete_operation(ctx, phase="completed", evidence=evidence)
             if not result.cleanup_ok:
-                print(
-                    "error: backup archive preserved but plaintext cleanup failed; "
-                    "residuals: " + ", ".join(result.cleanup_residuals),
-                    file=sys.stderr,
-                )
                 return EXIT_FAILURE
             return EXIT_OK
     except BackupError as exc:

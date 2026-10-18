@@ -638,6 +638,7 @@ def bind_staging_to_approved_target(
     to_sha: str,
     from_ref: str | None = None,
     from_sha: str | None = None,
+    operation_id: str | None = None,
 ) -> Path:
     """Bind complete updater-owned staged vendor surface to approved target at to_sha.
 
@@ -684,6 +685,19 @@ def bind_staging_to_approved_target(
     approved_files = _inventory_regular_files(target_docker)
     approved_keys = set(approved_files)
     staged_files = _inventory_regular_files(staging)
+    if operation_id is not None:
+        validate_reconcile_record(root, staging, operation_id=operation_id)
+        record = load_promote_record(promote_record_path(staging))
+        for key, value in (
+            ("to_ref", to_ref),
+            ("to_sha", to_sha),
+            ("from_ref", from_ref),
+            ("from_sha", from_sha),
+        ):
+            if record.get(key) != value:
+                raise UpdateError("promotion record pin mismatch", code=EXIT_SAFETY)
+        # Only this canonical, validated operation record is outside vendor equality.
+        staged_files.pop(PROMOTE_RECORD_NAME, None)
 
     # Expected updater-owned surface = approved target minus closed ownership boundary.
     expected = {
@@ -952,6 +966,53 @@ def load_promote_record(path: Path) -> dict[str, Any]:
     if not isinstance(data.get("paths"), list):
         raise UpdateError("promote record missing paths", code=EXIT_SAFETY)
     return data
+
+
+def validate_reconcile_record(root: Path, staging: Path, *, operation_id: str) -> dict[str, Any]:
+    """Validate canonical operation evidence before excluding it from vendor binding."""
+    expected = root / "staging" / f"update-{operation_id}"
+    quarantine = root / "staging" / f"update-quarantine-{operation_id}"
+    if staging != expected or staging.is_symlink() or staging.resolve() != expected.absolute():
+        raise UpdateError("noncanonical promotion staging", code=EXIT_SAFETY)
+    record = load_promote_record(promote_record_path(staging))
+    if (
+        record.get("operation_id") != operation_id
+        or record.get("staging_path") != str(expected)
+        or record.get("quarantine_path") != str(quarantine)
+        or not isinstance(record.get("backup_id"), str)
+        or not record["backup_id"]
+    ):
+        raise UpdateError("promotion record identity/path mismatch", code=EXIT_SAFETY)
+    if quarantine.is_symlink() or quarantine.resolve() != quarantine.absolute():
+        raise UpdateError("noncanonical promotion quarantine", code=EXIT_SAFETY)
+    if (record.get("from_ref"), record.get("to_ref")) not in up.REVIEWED_TRANSITIONS:
+        raise UpdateError("promotion record edge is not reviewed", code=EXIT_SAFETY)
+    for prefix in ("from", "to"):
+        if up.resolve_ref_sha(record[f"{prefix}_ref"]) != record.get(f"{prefix}_sha"):
+            raise UpdateError("promotion record ref/SHA mismatch", code=EXIT_SAFETY)
+    entries = record["paths"]
+    rels = [p.get("rel") if isinstance(p, dict) else None for p in entries]
+    if not entries or any(not isinstance(r, str) for r in rels):
+        raise UpdateError("invalid promotion record paths", code=EXIT_SAFETY)
+    if len(set(rels)) != len(rels) or set(rels) != set(list_promote_relpaths(staging)):
+        raise UpdateError("promotion record inventory mismatch", code=EXIT_SAFETY)
+    for entry in entries:
+        pre, target = entry.get("pre"), entry.get("target")
+        if not isinstance(pre, dict) or not isinstance(target, dict):
+            raise UpdateError("invalid promotion path states", code=EXIT_SAFETY)
+        if pre.get("kind") not in {KIND_ABSENT, KIND_REGULAR_FILE}:
+            raise UpdateError("invalid promotion source state", code=EXIT_SAFETY)
+        if pre.get("kind") == KIND_REGULAR_FILE:
+            digest = pre.get("sha256")
+            if (
+                not isinstance(digest, str)
+                or len(digest) != 64
+                or any(c not in "0123456789abcdef" for c in digest)
+            ):
+                raise UpdateError("invalid promotion source hash", code=EXIT_SAFETY)
+        if not path_states_equal(observe_path_state(staging / entry["rel"]), target):
+            raise UpdateError("promotion target state mismatch", code=EXIT_SAFETY)
+    return record
 
 
 def update_promote_path_progress(
@@ -1767,11 +1828,13 @@ def update_project(
                     )
                     if not promotion_begun:
                         hint = (
-                            f"recovery: promotion did not begin; after explicit reconcile/"
-                            f"journal resolution, same-pin restore of {backup_id} may apply "
-                            f"while destination pin still matches the archive. "
-                            f"Unresolved operation {ctx.operation_id} still blocks ordinary "
-                            "restore/update until reconciled."
+                            f"recovery: promotion did not begin; archive {backup_id} remains "
+                            "recovery evidence. Same-pin restore requires a compatible "
+                            "destination and no unresolved maintenance journal. "
+                            f"Unresolved operation {ctx.operation_id} blocks ordinary "
+                            "restore/update. Reconcile requires canonical promotion evidence "
+                            "and continues forward to the original target; it does not "
+                            "clear the journal to enable rollback."
                         )
                     print(hint, file=sys.stderr)
                 return exc.code
@@ -1850,11 +1913,7 @@ def reconcile_interrupted_update(
 
             evidence = journal.get("evidence") if isinstance(journal.get("evidence"), dict) else {}
             staging = root / "staging" / f"update-{op_id}"
-            rec_path_hint = evidence.get("promote_record_path")
-            rec_path = Path(str(rec_path_hint)) if rec_path_hint else promote_record_path(staging)
-            if not rec_path.is_file():
-                # Fallback to operation-scoped staging location.
-                rec_path = promote_record_path(staging)
+            rec_path = promote_record_path(staging)
             if not rec_path.is_file():
                 payload = {
                     "ok": False,
@@ -1876,10 +1935,16 @@ def reconcile_interrupted_update(
                 )
                 return EXIT_SAFETY
 
-            record = load_promote_record(rec_path)
+            record = validate_reconcile_record(root, staging, operation_id=op_id)
             if str(record.get("operation_id") or "") != op_id:
                 print("error: promote-record operation_id mismatch", file=sys.stderr)
                 return EXIT_SAFETY
+
+            for key in ("from_ref", "from_sha", "to_ref", "to_sha", "backup_id"):
+                if key in evidence and evidence[key] != record.get(key):
+                    raise UpdateError(
+                        "promotion record disagrees with journal identity", code=EXIT_SAFETY
+                    )
 
             from_ref = str(record["from_ref"])
             from_sha = str(record["from_sha"])
@@ -1915,7 +1980,9 @@ def reconcile_interrupted_update(
                 },
             )
 
-            foreign = [d for d in diagnoses if d["classification"] == CLASS_FOREIGN]
+            foreign = [
+                d for d in diagnoses if d["classification"] in {CLASS_FOREIGN, CLASS_MISSING}
+            ]
             if foreign:
                 payload = {
                     "ok": False,
@@ -1933,9 +2000,7 @@ def reconcile_interrupted_update(
                 return EXIT_SAFETY
 
             # Staging required for any remaining promote mutations.
-            need_promote = [
-                d for d in diagnoses if d["classification"] in {CLASS_EXACT_SOURCE, CLASS_MISSING}
-            ]
+            need_promote = [d for d in diagnoses if d["classification"] == CLASS_EXACT_SOURCE]
             staging_ok = False
             if staging.is_dir() and not staging.is_symlink():
                 try:
@@ -1946,31 +2011,31 @@ def reconcile_interrupted_update(
                         to_sha=to_sha,
                         from_ref=from_ref,
                         from_sha=from_sha,
+                        operation_id=op_id,
                     )
                     staging_ok = True
                 except UpdateError as exc:
-                    if need_promote:
-                        from sbfleet.process import sanitize_configured_diagnostic
+                    from sbfleet.process import sanitize_configured_diagnostic
 
-                        safe_reason = sanitize_configured_diagnostic(
-                            f"staging_rebind_failed: {exc}",
-                            deployment=deployment,
-                            max_len=500,
-                        )
-                        payload = {
-                            "ok": False,
-                            "reconcile": True,
-                            "operation_id": op_id,
-                            "mode": "diagnose_only",
-                            "phase": phase,
-                            "reason": safe_reason,
-                            "hint": _interrupted_recovery_hint(
-                                operation_id=op_id, backup_id=backup_id, phase=phase
-                            ),
-                        }
-                        print(json.dumps(payload, indent=2, sort_keys=True))
-                        return EXIT_SAFETY
-            elif need_promote:
+                    safe_reason = sanitize_configured_diagnostic(
+                        f"staging_rebind_failed: {exc}",
+                        deployment=deployment,
+                        max_len=500,
+                    )
+                    payload = {
+                        "ok": False,
+                        "reconcile": True,
+                        "operation_id": op_id,
+                        "mode": "diagnose_only",
+                        "phase": phase,
+                        "reason": safe_reason,
+                        "hint": _interrupted_recovery_hint(
+                            operation_id=op_id, backup_id=backup_id, phase=phase
+                        ),
+                    }
+                    print(json.dumps(payload, indent=2, sort_keys=True))
+                    return EXIT_SAFETY
+            else:
                 payload = {
                     "ok": False,
                     "reconcile": True,
@@ -2012,7 +2077,7 @@ def reconcile_interrupted_update(
                     update_promote_path_progress(
                         staging, record, rel=rel, progress=PROGRESS_PREPARED
                     )
-                    quarantine.mkdir(parents=True, mode=0o700)
+                    quarantine.mkdir(parents=True, mode=0o700, exist_ok=True)
                     dest.parent.mkdir(parents=True, exist_ok=True)
                     if dest.exists() or dest.is_symlink():
                         qdest = quarantine / rel

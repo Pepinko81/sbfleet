@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from fixture_cleanup import cleanup_compose_resources
 from sbfleet import upstream as up
 from sbfleet.process import run
 
@@ -25,6 +26,15 @@ def _docker_ok() -> bool:
         check=False,
     )
     return r.ok
+
+
+@pytest.fixture()
+def compose_run_id():
+    run_id = uuid.uuid4().hex
+    try:
+        yield run_id
+    finally:
+        cleanup_compose_resources(f"sbfleet_dotenv_{run_id}")
 
 
 def _compose_printenv(work: Path, key: str, *, run_id: str) -> str:
@@ -55,7 +65,7 @@ def _write_probe(work: Path, env_text: str, keys: list[str]) -> None:
 
 
 @pytest.mark.docker
-def test_compose_effective_dotenv_matches_parse_dotenv(tmp_path: Path) -> None:
+def test_compose_effective_dotenv_matches_parse_dotenv(tmp_path: Path, compose_run_id: str) -> None:
     """Write fleet dotenv → compose run printenv → compare to parse_dotenv.
 
     Note: ``docker compose config`` may still show ``$$`` literally; runtime
@@ -64,7 +74,7 @@ def test_compose_effective_dotenv_matches_parse_dotenv(tmp_path: Path) -> None:
     if not _docker_ok():
         pytest.skip("docker unavailable")
 
-    run_id = uuid.uuid4().hex[:8]
+    run_id = compose_run_id
     work = tmp_path / f"dotenv-eff-{run_id}"
     work.mkdir()
     values = {
@@ -85,12 +95,14 @@ def test_compose_effective_dotenv_matches_parse_dotenv(tmp_path: Path) -> None:
 
 
 @pytest.mark.docker
-def test_compose_effective_single_quoted_literal_not_expanded(tmp_path: Path) -> None:
+def test_compose_effective_single_quoted_literal_not_expanded(
+    tmp_path: Path, compose_run_id: str
+) -> None:
     """Single-quoted $HOME must be identical for parse_dotenv and Compose runtime."""
     if not _docker_ok():
         pytest.skip("docker unavailable")
 
-    run_id = uuid.uuid4().hex[:8]
+    run_id = compose_run_id
     work = tmp_path / f"dotenv-sq-{run_id}"
     work.mkdir()
     (work / ".env").write_text("X='$HOME'\n", encoding="utf-8")
@@ -102,12 +114,12 @@ def test_compose_effective_single_quoted_literal_not_expanded(tmp_path: Path) ->
 
 
 @pytest.mark.docker
-def test_compose_effective_accepted_manual_forms(tmp_path: Path) -> None:
+def test_compose_effective_accepted_manual_forms(tmp_path: Path, compose_run_id: str) -> None:
     """Every accepted *manual* form must match Compose printenv ()."""
     if not _docker_ok():
         pytest.skip("docker unavailable")
 
-    run_id = uuid.uuid4().hex[:8]
+    run_id = compose_run_id
     work = tmp_path / f"dotenv-manual-{run_id}"
     work.mkdir()
     env_text = (

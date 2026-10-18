@@ -22,7 +22,6 @@ from sbfleet.process import (
     Redactor,
     run,
     sanitize_configured_diagnostic,
-    sanitize_diagnostic,
 )
 from sbfleet.upstream import PINNED_REF, require_local_node
 
@@ -167,7 +166,7 @@ def run_doctor(
             }
         )
 
-    # For project-scoped doctor, construct configured redactor BEFORE any
+    # Construct the scoped configured redactor BEFORE any
     # potentially secret-bearing host/Docker diagnostic is accumulated.
     if project:
         deployment = reg.project_dir(root, project) / "deployment"
@@ -175,6 +174,15 @@ def run_doctor(
             from sbfleet.process import project_diagnostic_redactor
 
             diag_redactor = project_diagnostic_redactor(deployment)
+            diag_redactor_ok = True
+        except DiagnosticRedactorUnavailable:
+            diag_redactor = Redactor()
+            diag_redactor_ok = False
+    elif sandbox and Path(sandbox).is_dir():
+        try:
+            from sbfleet.process import sandbox_diagnostic_redactor
+
+            diag_redactor = sandbox_diagnostic_redactor(Path(sandbox).resolve())
             diag_redactor_ok = True
         except DiagnosticRedactorUnavailable:
             diag_redactor = Redactor()
@@ -204,7 +212,7 @@ def run_doctor(
             check=False,
         )
         if cv.ok:
-            add("docker-compose", "pass", (cv.stdout or "").strip()[:120], "none")
+            add("docker-compose", "pass", (cv.stdout or "").strip(), "none")
         else:
             add("docker-compose", "fail", "compose plugin missing/failed", "install Compose v2+")
         add("docker", "pass", "docker binary present", "none")
@@ -271,14 +279,6 @@ def run_doctor(
             "check path",
         )
         if Path(sandbox).is_dir():
-            try:
-                from sbfleet.process import sandbox_diagnostic_redactor
-
-                diag_redactor = sandbox_diagnostic_redactor(Path(sandbox).resolve())
-                diag_redactor_ok = True
-            except DiagnosticRedactorUnavailable:
-                diag_redactor = Redactor()
-                diag_redactor_ok = False
             from sbfleet.sandbox import doctor_sandbox_checks
 
             for c in doctor_sandbox_checks(sandbox, home=root):
@@ -620,8 +620,9 @@ def _current_image_facts(
         if not insp.ok:
             return {
                 "status": "error",
-                "detail": sanitize_diagnostic(
+                "detail": sanitize_configured_diagnostic(
                     insp.stderr or insp.stdout or f"inspect failed for {svc}",
+                    deployment=deployment,
                     max_len=120,
                 ),
             }

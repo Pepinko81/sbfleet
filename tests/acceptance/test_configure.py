@@ -50,7 +50,7 @@ def disposable_home(tmp_path: Path):
     yield {"root": root, "run_id": run_id, "fleet_id": fleet}
     import fixture_cleanup
 
-    fixture_cleanup.cleanup_labeled_fleet_resources(fleet_id=fleet)
+    assert not fixture_cleanup.cleanup_labeled_fleet_resources(fleet_id=fleet)
 
 
 def _studio_env(deployment: Path, compose_project: str) -> dict[str, str]:

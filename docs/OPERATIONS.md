@@ -82,3 +82,14 @@ Replace X.Y.Z with an explicitly supported stable target from `REVIEWED_TRANSITI
 - Missing Docker/CLI/age/nginx: prerequisite failure, not fabricated success. Sandbox cannot substitute for fleet project or vice versa.
 
 Use sandbox start/status/studio/reset/destroy/env for disposable app work; see DEV_SANDBOX and implementation note. Proven adoption authority (SBF-contract/012) is implemented: fingerprint drift requires `--revalidate`; destroy/reset require adoption + owned inventory; not a hostile same-user boundary.
+
+
+Reconcile requires the canonical regular `staging/update-<operation_id>/promote-record.json`,
+its original operation/backup/edge identity, and the complete original staged target.
+Only that validated record is excluded from upstream byte comparison; arbitrary extra
+files still refuse. Missing/replaced live paths refuse (a planned addition still absent
+is an exact-source state). No-promotion and partial-promotion states resume only
+exact-source paths. Complete promotion and runtime-verified/journal-incomplete states
+also rebind staging and rerun runtime verification before advancing `last_verified_upstream`.
+Missing or invalid evidence remains a nonzero refusal with retained staging and journal;
+there is no new plan, backup, edge, operation identity, or generic rollback.

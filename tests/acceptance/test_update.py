@@ -94,8 +94,10 @@ def disposable_home(tmp_path: Path):
     yield {"root": root, "identity": id_path, "run_id": run_id, "fleet_id": fleet}
     import fixture_cleanup
 
-    fixture_cleanup.cleanup_labeled_fleet_resources(fleet_id=fleet)
-    os.environ.pop("SBFLEET_AGE_IDENTITY", None)
+    try:
+        assert not fixture_cleanup.cleanup_labeled_fleet_resources(fleet_id=fleet)
+    finally:
+        os.environ.pop("SBFLEET_AGE_IDENTITY", None)
 
 
 def _sentinel(run_id: str) -> tuple[str, str]:
