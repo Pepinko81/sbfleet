@@ -503,3 +503,199 @@ sbfleet nginx install myapp
 4. Set `SBFLEET_AGE_IDENTITY` for backup verify / restore
 
 Acceptance fixtures must use disposable sbfleet-owned keys, never personal production keys.
+
+## Fleet observation interfaces
+
+- `sbfleet [--home /absolute/fleet] status --all [--json]`
+- `sbfleet [--home /absolute/fleet] dashboard [--once] [--refresh SECONDS]`
+- `sbfleet [--home /absolute/fleet] mcp`
+
+`status PROJECT [--json]` retains its existing format and behavior. `PROJECT` and
+`--all` are mutually exclusive. Fleet JSON is a separate, versioned contract:
+`schema_version = "sbfleet.fleet.v1"`. Its JSON Schema ships as
+`sbfleet/fleet.schema.json` in the wheel. Keys and project ordering are deterministic;
+`observed_at` and backup ages naturally change on each observation. Output is
+non-interactive. Exit 0 means observation completed, not that every project is
+healthy; exit 7 means at least one observation failed. Consult states and attention
+fields for readiness. An absent root is UNKNOWN and is never initialized.
+
+The snapshot contains totals, managed projects, state, runtime/health summaries,
+allocated ports, loopback endpoints, Studio URL, recorded upstream ref/commit,
+service checks, unresolved-operation flag and backup evidence. Totals include
+HEALTHY, STOPPED, FAILED, UNKNOWN and `other` (STARTING/DEGRADED/UNHEALTHY) so
+counts sum to the project total. `needing_attention` includes missing/unverified
+backups. No passwords, keys, raw diagnostics, archive paths or backup identities
+are returned. Display names use configured secret redaction. Endpoints are host
+loopback addresses; they do not imply reachability from another machine.
+
+Backup coverage counts only the latest registered backup when the existing
+recovery-evidence authority validates its archive binding and verification time.
+This hashes the archive and may be slow for large backups. Missing evidence is
+UNKNOWN, not successful verification. `NONE` means no latest backup is registered.
+The snapshot does not search historical archives. Observation is sequential and
+not an atomic transaction across projects. Status probes retain existing timeouts.
+`update_available: null` means no truthful update comparison was established;
+no upstream network fetch is performed. Observation uses the existing fixed
+Docker, HTTP and SQL health probes; it accepts no agent-supplied commands. Resource usage is UNKNOWN; service checks
+are not CPU/memory metrics. The project list covers fleet-managed deployments;
+sandbox adoption is separate, hence `sandbox: "NOT_APPLICABLE"` for these rows.
+
+### Read-only terminal dashboard
+
+In the interactive shell, `/dashboard` invokes the same dashboard, with the same
+options. It appears in `/help` and command completion. Quitting returns to the shell.
+
+The dashboard uses the already-installed `prompt_toolkit`. Arrow keys select a
+project; `r`/`R` refreshes, Enter opens details, and `?` opens help.
+`q`/`Q` or Ctrl-C exits; Esc closes a view or exits from the overview.
+PgUp/PgDn scroll lower panels. Wide terminals pair panels; narrow terminals stack
+panels, and very small terminals retain core status and exit controls.
+`--refresh` defaults to 0 (manual)
+and accepts 5–3600 seconds when enabled. Refreshes never overlap. Collection runs
+off the UI thread; existing probes may finish after quit. Redirected input/output
+and `--once` print one snapshot without a fullscreen terminal. There are no
+start, stop, remove, restore or update actions.
+
+### Local-only read-only MCP
+
+The packaged official MCP Python SDK serves stdio only. Start one process per
+agent connection, using the same user permissions as the fleet owner. Example
+MCP client configuration (replace the absolute paths):
+
+```json
+{
+  "mcpServers": {
+    "sbfleet": {
+      "command": "/home/you/.local/bin/sbfleet",
+      "args": ["--home", "/home/you/.local/share/sbfleet", "mcp"]
+    }
+  }
+}
+```
+
+Original fleet tools: `fleet_summary`, `list_projects`, `project_status(slug)`,
+`project_connection_info(slug)`, `backup_status(slug)`, `doctor_summary(slug)`.
+All have explicit input/output schemas and read-only annotations. Each fleet-tool request
+collects the canonical snapshot; there is no persistent cache. The first two
+return the full snapshot so callers retain completeness and fleet errors.
+`doctor_summary` summarizes canonical runtime checks and attention only; it does
+not claim to run the full host/sandbox doctor. Unknown tools fail. Missing slugs
+return NOT_FOUND only after a complete observation, otherwise UNKNOWN. There is
+no reveal option, command execution argument, remote listener or mutation tool.
+
+## Verified same-pin clone
+
+```text
+sbfleet [--home PATH] clone SOURCE TARGET [--identity PATH] [--json]
+```
+
+TARGET must not exist. An age identity must be supplied via `--identity` or
+`SBFLEET_AGE_IDENTITY`, and fleet backup recipients must already be configured.
+The source must be an authority-proven, initialized standard/file-storage project
+at the exact supported `self-hosted/v0.8.2` / `564eab8ad7840b13324f68b1bfac074ef8d51c21`
+pin, with the reviewed default pooler schema and single tenant/manager state.
+Custom pooler mappings, schema drift and cross-pin copies are refused.
+
+Clone takes a fresh recovery-verified backup, creates a new project identity and
+placement, installs the supported payload, rebinds the pooler tenant, verifies
+recovery facts and both pooler connection modes, and leaves TARGET **STOPPED**.
+Verification temporarily starts the destination. SOURCE returns to its prior
+runtime state through the existing bounded backup/quiesce contract.
+
+JSON uses `schema_version: "sbfleet.clone.v1"` and includes source, target, pin,
+destination identity/ports, operation_id, verification, final_state, success and
+safe attention classifications. Exit 0 means verified success; exit 5 means
+refusal/failure. Operation evidence is retained under `HOME/clone-operations`.
+If ownership cannot be proven during failure cleanup, the target is retained for
+review; there is no broad cleanup fallback. Plaintext cleanup failure is nonzero.
+
+Application JWT/API and physical-recovery credentials/crypto remain source-bound;
+this is not credential rotation. Dashboard credentials are destination-owned.
+See [secret and identity contract](BACKUP_RESTORE.md#verified-same-pin-clone).
+The existing fleet JSON, dashboard and read-only MCP tools observe the new target.
+There is no MCP clone mutation tool. Ordinary restore remains same-project only.
+
+## Schema diff and migration plan
+
+```bash
+sbfleet schema diff SOURCE TARGET
+sbfleet schema diff SOURCE TARGET --json
+sbfleet migrate plan SOURCE TARGET
+sbfleet migrate plan SOURCE TARGET --json
+```
+
+SOURCE is desired and TARGET is current: ADDED means present in SOURCE but absent
+from TARGET, REMOVED means present only in TARGET. CHANGED compares facts under the
+same stable identity; UNSUPPORTED signals an operation outside the modeled semantics.
+Changes are not executable steps or dependency-ordered SQL. There is no `migrate apply`
+and no SQL preview. Exit 0 includes schemas with differences or unsupported inventory;
+exit 5 means observation or safety failure, reported as UNKNOWN rather than an empty diff.
+Neither command initializes a fleet or starts a stopped project.
+
+Both use `sbfleet-schema-v1`. JSON contracts `sbfleet.schema-diff.v1` and
+`sbfleet.migration-plan.v1` ship with JSON Schemas in the wheel, alongside the snapshot
+schema. Stable sorted identities are arrays (namespace, object, optional member/signature),
+not ambiguous dot-joined strings. No timestamps or catalog OIDs enter comparison.
+Before is TARGET and after is SOURCE. Diff JSON includes pins, summary counts,
+differences, unsupported inventory, limitations and a safe error code. Plan JSON wraps
+that exact diff and adds classifications/reasons. Identical schemas have an empty material
+diff even when unsupported inventory is present.
+
+Snapshots cover the `postgres` application database only; the separate `_supabase`
+pooler database is outside this comparison contract.
+
+Supported catalog facts: schemas; ordinary tables; column order, type identity, nullability,
+default/generation/identity/collation facts; PK/unique/FK/check/exclusion constraints;
+index uniqueness, definition, predicates and validity; function/procedure signatures,
+return types, language and definitions; enabled/forced RLS; policy command, roles,
+permissiveness, USING and WITH CHECK; views/materialized views; enums; sequence parameters
+and ownership (not current values); non-internal triggers; extension version inventory.
+SQL expressions, defaults, enum labels and function/view/trigger definitions are represented
+by SHA-256 fingerprints, so embedded literal secrets are not emitted. Equality is stable
+catalog deparse text, not a proof of semantic equivalence. Configured secrets in identifiers
+cause safe observation refusal. No function body or policy expression is executed.
+
+Namespace classifications:
+
+- SYSTEM: `pg_*` and `information_schema`; omitted from object comparison.
+- SUPABASE_MANAGED: `auth`, `storage`, `_realtime`, `realtime`, `supabase_functions`,
+  `pgbouncer`, `vault`, `net`, `graphql`, `graphql_public`, `extensions`, `_supavisor`.
+  Non-extension-owned objects remain visible, including Auth and Storage. Their plans
+  require at least review rather than promising safe platform changes; destructive
+  removals/type changes retain DESTRUCTIVE classification.
+- APPLICATION: all other namespaces, including `public` and user schemas.
+- IGNORED: extension-owned internals. Extension name/version/namespace remain in the
+  unsupported inventory; SBfleet does not plan extension migrations.
+
+PARTIAL/UNSUPPORTED: partition/inheritance semantics, foreign/composite relations, custom
+base/domain/range types, aggregates, rewrite rules and extension operations. Owner/ACL/grant,
+comment/security-label, publication/subscription, event-trigger, collation-definition,
+foreign-server, operator-class and role/database-setting changes are outside this model.
+These limitations are returned on every diff, not silently treated as equality.
+
+Planning is conservative: ordinary application schema/table additions and nullable columns
+of reviewed built-in scalar types without defaults, identity or generation are SAFE
+as individual operations. Domain, enum, array and other custom-type additions require review. Other dependent
+items still need review. Initial disabled RLS records are SAFE. All index additions require
+review for locking and expression semantics. FK/unique/check constraints, functions,
+policies, RLS changes, defaults and non-null additions are REVIEW_REQUIRED. Table/column/
+schema/sequence/enum/materialized-view removals are DESTRUCTIVE. All column type
+changes are conservatively DESTRUCTIVE: no widening/cast safety is inferred. Unsupported
+object operations are UNSUPPORTED. SAFE does not mean the whole plan is safe to execute.
+
+Only the reviewed `self-hosted/v0.8.2` commit
+`564eab8ad7840b13324f68b1bfac074ef8d51c21`, PostgreSQL major 17, is supported in this run.
+Cross-pin diff and planning refuse. Schema planning is not a Supabase version upgrade;
+use the reviewed updater for that. Each database is read in its own repeatable-read,
+read-only transaction with a 15-second statement timeout, 2-second lock timeout and
+25-second client deadline. Two databases are not observed atomically. Concurrent DDL may
+require another manual observation; results are not cached or refreshed by the dashboard.
+
+### Schema MCP tools
+
+The existing local-only stdio MCP server additionally exposes `schema_diff(source, target)`
+and `migration_plan(source, target)`. They call the same production services as CLI and
+accept exact project slugs only, never SQL, shell commands or lifecycle actions. The six
+original observation tools retain their contracts. The two new tools return the same
+versioned diff/plan JSON, including UNKNOWN and unsupported inventory. No clone, mutation,
+SQL execution endpoint or `migrate_apply` tool is exposed.

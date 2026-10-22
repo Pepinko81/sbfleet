@@ -1,0 +1,344 @@
+{
+  "$defs": {
+    "Difference": {
+      "additionalProperties": false,
+      "properties": {
+        "after": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "$ref": "#/$defs/JsonValue"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "After"
+        },
+        "before": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "$ref": "#/$defs/JsonValue"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Before"
+        },
+        "change": {
+          "enum": [
+            "ADDED",
+            "REMOVED",
+            "CHANGED",
+            "UNSUPPORTED"
+          ],
+          "title": "Change",
+          "type": "string"
+        },
+        "changed_fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Changed Fields",
+          "type": "array"
+        },
+        "classification": {
+          "enum": [
+            "APPLICATION",
+            "SUPABASE_MANAGED",
+            "SYSTEM",
+            "IGNORED"
+          ],
+          "title": "Classification",
+          "type": "string"
+        },
+        "key": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Key",
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "SCHEMA",
+            "TABLE",
+            "COLUMN",
+            "CONSTRAINT",
+            "INDEX",
+            "FUNCTION",
+            "RLS",
+            "POLICY",
+            "VIEW",
+            "MATERIALIZED_VIEW",
+            "ENUM",
+            "SEQUENCE",
+            "TRIGGER",
+            "EXTENSION",
+            "UNSUPPORTED"
+          ],
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "key",
+        "change",
+        "classification"
+      ],
+      "title": "Difference",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "PlanItem": {
+      "additionalProperties": false,
+      "properties": {
+        "classification": {
+          "enum": [
+            "SAFE",
+            "REVIEW_REQUIRED",
+            "DESTRUCTIVE",
+            "UNSUPPORTED"
+          ],
+          "title": "Classification",
+          "type": "string"
+        },
+        "difference": {
+          "$ref": "#/$defs/Difference"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "difference",
+        "classification",
+        "reason"
+      ],
+      "title": "PlanItem",
+      "type": "object"
+    },
+    "SchemaDiff": {
+      "additionalProperties": false,
+      "properties": {
+        "differences": {
+          "items": {
+            "$ref": "#/$defs/Difference"
+          },
+          "title": "Differences",
+          "type": "array"
+        },
+        "direction": {
+          "const": "TARGET_TO_SOURCE",
+          "default": "TARGET_TO_SOURCE",
+          "title": "Direction",
+          "type": "string"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "pin_mismatch": {
+          "default": false,
+          "title": "Pin Mismatch",
+          "type": "boolean"
+        },
+        "schema_model_version": {
+          "const": "sbfleet-schema-v1",
+          "default": "sbfleet-schema-v1",
+          "title": "Schema Model Version",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "sbfleet.schema-diff.v1",
+          "default": "sbfleet.schema-diff.v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "source_pin": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Source Pin",
+          "type": "object"
+        },
+        "state": {
+          "default": "UNKNOWN",
+          "enum": [
+            "KNOWN",
+            "UNKNOWN"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "summary": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Summary",
+          "type": "object"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "target_pin": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Target Pin",
+          "type": "object"
+        },
+        "unsupported_objects": {
+          "items": {
+            "$ref": "#/$defs/SchemaObject"
+          },
+          "title": "Unsupported Objects",
+          "type": "array"
+        }
+      },
+      "required": [
+        "source",
+        "target"
+      ],
+      "title": "SchemaDiff",
+      "type": "object"
+    },
+    "SchemaObject": {
+      "additionalProperties": false,
+      "properties": {
+        "classification": {
+          "default": "APPLICATION",
+          "enum": [
+            "APPLICATION",
+            "SUPABASE_MANAGED",
+            "SYSTEM",
+            "IGNORED"
+          ],
+          "title": "Classification",
+          "type": "string"
+        },
+        "facts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Facts",
+          "type": "object"
+        },
+        "key": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Key",
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "SCHEMA",
+            "TABLE",
+            "COLUMN",
+            "CONSTRAINT",
+            "INDEX",
+            "FUNCTION",
+            "RLS",
+            "POLICY",
+            "VIEW",
+            "MATERIALIZED_VIEW",
+            "ENUM",
+            "SEQUENCE",
+            "TRIGGER",
+            "EXTENSION",
+            "UNSUPPORTED"
+          ],
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "key",
+        "facts"
+      ],
+      "title": "SchemaObject",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "diff": {
+      "$ref": "#/$defs/SchemaDiff"
+    },
+    "items": {
+      "items": {
+        "$ref": "#/$defs/PlanItem"
+      },
+      "title": "Items",
+      "type": "array"
+    },
+    "preview_only": {
+      "const": true,
+      "default": true,
+      "title": "Preview Only",
+      "type": "boolean"
+    },
+    "schema_model_version": {
+      "const": "sbfleet-schema-v1",
+      "default": "sbfleet-schema-v1",
+      "title": "Schema Model Version",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "sbfleet.migration-plan.v1",
+      "default": "sbfleet.migration-plan.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "sql_preview": {
+      "const": false,
+      "default": false,
+      "title": "Sql Preview",
+      "type": "boolean"
+    },
+    "summary": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Summary",
+      "type": "object"
+    }
+  },
+  "required": [
+    "diff"
+  ],
+  "title": "MigrationPlan",
+  "type": "object"
+}

@@ -1,0 +1,682 @@
+{
+  "columns": [
+    {
+      "column_default": null,
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "ordinal_position": 1,
+      "table_name": "cluster_tenants",
+      "udt_name": "uuid"
+    },
+    {
+      "column_default": null,
+      "column_name": "type",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "ordinal_position": 2,
+      "table_name": "cluster_tenants",
+      "udt_name": "varchar"
+    },
+    {
+      "column_default": "false",
+      "column_name": "active",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "ordinal_position": 3,
+      "table_name": "cluster_tenants",
+      "udt_name": "bool"
+    },
+    {
+      "column_default": null,
+      "column_name": "cluster_alias",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "ordinal_position": 4,
+      "table_name": "cluster_tenants",
+      "udt_name": "varchar"
+    },
+    {
+      "column_default": null,
+      "column_name": "tenant_external_id",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "ordinal_position": 5,
+      "table_name": "cluster_tenants",
+      "udt_name": "varchar"
+    },
+    {
+      "column_default": null,
+      "column_name": "inserted_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "ordinal_position": 6,
+      "table_name": "cluster_tenants",
+      "udt_name": "timestamp"
+    },
+    {
+      "column_default": null,
+      "column_name": "updated_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "ordinal_position": 7,
+      "table_name": "cluster_tenants",
+      "udt_name": "timestamp"
+    },
+    {
+      "column_default": null,
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "ordinal_position": 1,
+      "table_name": "clusters",
+      "udt_name": "uuid"
+    },
+    {
+      "column_default": "false",
+      "column_name": "active",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "ordinal_position": 2,
+      "table_name": "clusters",
+      "udt_name": "bool"
+    },
+    {
+      "column_default": null,
+      "column_name": "alias",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "ordinal_position": 3,
+      "table_name": "clusters",
+      "udt_name": "varchar"
+    },
+    {
+      "column_default": null,
+      "column_name": "inserted_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "ordinal_position": 4,
+      "table_name": "clusters",
+      "udt_name": "timestamp"
+    },
+    {
+      "column_default": null,
+      "column_name": "updated_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "ordinal_position": 5,
+      "table_name": "clusters",
+      "udt_name": "timestamp"
+    },
+    {
+      "column_default": null,
+      "column_name": "version",
+      "data_type": "bigint",
+      "is_nullable": "NO",
+      "ordinal_position": 1,
+      "table_name": "schema_migrations",
+      "udt_name": "int8"
+    },
+    {
+      "column_default": null,
+      "column_name": "inserted_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES",
+      "ordinal_position": 2,
+      "table_name": "schema_migrations",
+      "udt_name": "timestamp"
+    },
+    {
+      "column_default": null,
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "ordinal_position": 1,
+      "table_name": "tenants",
+      "udt_name": "uuid"
+    },
+    {
+      "column_default": null,
+      "column_name": "external_id",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "ordinal_position": 2,
+      "table_name": "tenants",
+      "udt_name": "varchar"
+    },
+    {
+      "column_default": null,
+      "column_name": "db_host",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "ordinal_position": 3,
+      "table_name": "tenants",
+      "udt_name": "varchar"
+    },
+    {
+      "column_default": null,
+      "column_name": "db_port",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "ordinal_position": 4,
+      "table_name": "tenants",
+      "udt_name": "int4"
+    },
+    {
+      "column_default": null,
+      "column_name": "db_database",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "ordinal_position": 5,
+      "table_name": "tenants",
+      "udt_name": "varchar"
+    },
+    {
+      "column_default": null,
+      "column_name": "inserted_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "ordinal_position": 6,
+      "table_name": "tenants",
+      "udt_name": "timestamp"
+    },
+    {
+      "column_default": null,
+      "column_name": "updated_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "ordinal_position": 7,
+      "table_name": "tenants",
+      "udt_name": "timestamp"
+    },
+    {
+      "column_default": null,
+      "column_name": "default_parameter_status",
+      "data_type": "jsonb",
+      "is_nullable": "NO",
+      "ordinal_position": 8,
+      "table_name": "tenants",
+      "udt_name": "jsonb"
+    },
+    {
+      "column_default": "'auto'::character varying",
+      "column_name": "ip_version",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "ordinal_position": 9,
+      "table_name": "tenants",
+      "udt_name": "varchar"
+    },
+    {
+      "column_default": "false",
+      "column_name": "upstream_ssl",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "ordinal_position": 10,
+      "table_name": "tenants",
+      "udt_name": "bool"
+    },
+    {
+      "column_default": null,
+      "column_name": "upstream_verify",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "ordinal_position": 11,
+      "table_name": "tenants",
+      "udt_name": "varchar"
+    },
+    {
+      "column_default": null,
+      "column_name": "upstream_tls_ca",
+      "data_type": "bytea",
+      "is_nullable": "YES",
+      "ordinal_position": 12,
+      "table_name": "tenants",
+      "udt_name": "bytea"
+    },
+    {
+      "column_default": "false",
+      "column_name": "enforce_ssl",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "ordinal_position": 13,
+      "table_name": "tenants",
+      "udt_name": "bool"
+    },
+    {
+      "column_default": "true",
+      "column_name": "require_user",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "ordinal_position": 14,
+      "table_name": "tenants",
+      "udt_name": "bool"
+    },
+    {
+      "column_default": null,
+      "column_name": "auth_query",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "ordinal_position": 15,
+      "table_name": "tenants",
+      "udt_name": "varchar"
+    },
+    {
+      "column_default": "15",
+      "column_name": "default_pool_size",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "ordinal_position": 16,
+      "table_name": "tenants",
+      "udt_name": "int4"
+    },
+    {
+      "column_default": null,
+      "column_name": "sni_hostname",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "ordinal_position": 17,
+      "table_name": "tenants",
+      "udt_name": "varchar"
+    },
+    {
+      "column_default": "1000",
+      "column_name": "default_max_clients",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "ordinal_position": 18,
+      "table_name": "tenants",
+      "udt_name": "int4"
+    },
+    {
+      "column_default": "0",
+      "column_name": "client_idle_timeout",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "ordinal_position": 19,
+      "table_name": "tenants",
+      "udt_name": "int4"
+    },
+    {
+      "column_default": "'fifo'::character varying",
+      "column_name": "default_pool_strategy",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "ordinal_position": 20,
+      "table_name": "tenants",
+      "udt_name": "varchar"
+    },
+    {
+      "column_default": "60",
+      "column_name": "client_heartbeat_interval",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "ordinal_position": 21,
+      "table_name": "tenants",
+      "udt_name": "int4"
+    },
+    {
+      "column_default": "ARRAY['0.0.0.0/0'::character varying, '::/0'::character varying]",
+      "column_name": "allow_list",
+      "data_type": "ARRAY",
+      "is_nullable": "NO",
+      "ordinal_position": 22,
+      "table_name": "tenants",
+      "udt_name": "_varchar"
+    },
+    {
+      "column_default": null,
+      "column_name": "availability_zone",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "ordinal_position": 23,
+      "table_name": "tenants",
+      "udt_name": "varchar"
+    },
+    {
+      "column_default": "false",
+      "column_name": "use_jit",
+      "data_type": "boolean",
+      "is_nullable": "YES",
+      "ordinal_position": 24,
+      "table_name": "tenants",
+      "udt_name": "bool"
+    },
+    {
+      "column_default": null,
+      "column_name": "jit_api_url",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "ordinal_position": 25,
+      "table_name": "tenants",
+      "udt_name": "varchar"
+    },
+    {
+      "column_default": "'{}'::jsonb",
+      "column_name": "feature_flags",
+      "data_type": "jsonb",
+      "is_nullable": "YES",
+      "ordinal_position": 26,
+      "table_name": "tenants",
+      "udt_name": "jsonb"
+    },
+    {
+      "column_default": null,
+      "column_name": "banned_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES",
+      "ordinal_position": 27,
+      "table_name": "tenants",
+      "udt_name": "timestamp"
+    },
+    {
+      "column_default": null,
+      "column_name": "ban_reason",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "ordinal_position": 28,
+      "table_name": "tenants",
+      "udt_name": "varchar"
+    },
+    {
+      "column_default": null,
+      "column_name": "banned_until",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "YES",
+      "ordinal_position": 29,
+      "table_name": "tenants",
+      "udt_name": "timestamp"
+    },
+    {
+      "column_default": null,
+      "column_name": "id",
+      "data_type": "uuid",
+      "is_nullable": "NO",
+      "ordinal_position": 1,
+      "table_name": "users",
+      "udt_name": "uuid"
+    },
+    {
+      "column_default": null,
+      "column_name": "db_user_alias",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "ordinal_position": 2,
+      "table_name": "users",
+      "udt_name": "varchar"
+    },
+    {
+      "column_default": null,
+      "column_name": "db_user",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "ordinal_position": 3,
+      "table_name": "users",
+      "udt_name": "varchar"
+    },
+    {
+      "column_default": null,
+      "column_name": "db_pass_encrypted",
+      "data_type": "bytea",
+      "is_nullable": "NO",
+      "ordinal_position": 4,
+      "table_name": "users",
+      "udt_name": "bytea"
+    },
+    {
+      "column_default": null,
+      "column_name": "pool_size",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "ordinal_position": 5,
+      "table_name": "users",
+      "udt_name": "int4"
+    },
+    {
+      "column_default": null,
+      "column_name": "mode_type",
+      "data_type": "character varying",
+      "is_nullable": "NO",
+      "ordinal_position": 6,
+      "table_name": "users",
+      "udt_name": "varchar"
+    },
+    {
+      "column_default": "false",
+      "column_name": "is_manager",
+      "data_type": "boolean",
+      "is_nullable": "NO",
+      "ordinal_position": 7,
+      "table_name": "users",
+      "udt_name": "bool"
+    },
+    {
+      "column_default": null,
+      "column_name": "tenant_external_id",
+      "data_type": "character varying",
+      "is_nullable": "YES",
+      "ordinal_position": 8,
+      "table_name": "users",
+      "udt_name": "varchar"
+    },
+    {
+      "column_default": null,
+      "column_name": "inserted_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "ordinal_position": 9,
+      "table_name": "users",
+      "udt_name": "timestamp"
+    },
+    {
+      "column_default": null,
+      "column_name": "updated_at",
+      "data_type": "timestamp without time zone",
+      "is_nullable": "NO",
+      "ordinal_position": 10,
+      "table_name": "users",
+      "udt_name": "timestamp"
+    },
+    {
+      "column_default": "60000",
+      "column_name": "pool_checkout_timeout",
+      "data_type": "integer",
+      "is_nullable": "NO",
+      "ordinal_position": 11,
+      "table_name": "users",
+      "udt_name": "int4"
+    },
+    {
+      "column_default": null,
+      "column_name": "max_clients",
+      "data_type": "integer",
+      "is_nullable": "YES",
+      "ordinal_position": 12,
+      "table_name": "users",
+      "udt_name": "int4"
+    }
+  ],
+  "constraints": [
+    [
+      "cluster_tenants",
+      "cluster_tenants_cluster_alias_fkey",
+      "FOREIGN KEY (cluster_alias) REFERENCES _supavisor.clusters(alias) ON DELETE CASCADE"
+    ],
+    [
+      "cluster_tenants",
+      "cluster_tenants_pkey",
+      "PRIMARY KEY (id)"
+    ],
+    [
+      "cluster_tenants",
+      "cluster_tenants_tenant_external_id_fkey",
+      "FOREIGN KEY (tenant_external_id) REFERENCES _supavisor.tenants(external_id)"
+    ],
+    [
+      "cluster_tenants",
+      "type",
+      "CHECK (((type)::text = ANY ((ARRAY['read'::character varying, 'write'::character varying])::text[])))"
+    ],
+    [
+      "clusters",
+      "clusters_pkey",
+      "PRIMARY KEY (id)"
+    ],
+    [
+      "schema_migrations",
+      "schema_migrations_pkey",
+      "PRIMARY KEY (version)"
+    ],
+    [
+      "tenants",
+      "auth_query_constraints",
+      "CHECK (((require_user = true) OR ((require_user = false) AND (auth_query IS NOT NULL))))"
+    ],
+    [
+      "tenants",
+      "default_pool_strategy_values",
+      "CHECK (((default_pool_strategy)::text = ANY ((ARRAY['fifo'::character varying, 'lifo'::character varying])::text[])))"
+    ],
+    [
+      "tenants",
+      "ip_version_values",
+      "CHECK (((ip_version)::text = ANY ((ARRAY['auto'::character varying, 'v4'::character varying, 'v6'::character varying])::text[])))"
+    ],
+    [
+      "tenants",
+      "tenants_pkey",
+      "PRIMARY KEY (id)"
+    ],
+    [
+      "tenants",
+      "upstream_constraints",
+      "CHECK ((((upstream_ssl = false) AND (upstream_verify IS NULL)) OR ((upstream_ssl = true) AND (upstream_verify IS NOT NULL))))"
+    ],
+    [
+      "tenants",
+      "upstream_verify_values",
+      "CHECK (((upstream_verify)::text = ANY ((ARRAY['none'::character varying, 'peer'::character varying])::text[])))"
+    ],
+    [
+      "users",
+      "users_pkey",
+      "PRIMARY KEY (id)"
+    ],
+    [
+      "users",
+      "users_tenant_external_id_fkey",
+      "FOREIGN KEY (tenant_external_id) REFERENCES _supavisor.tenants(external_id) ON DELETE CASCADE"
+    ]
+  ],
+  "incoming": [],
+  "indexes": [
+    [
+      "cluster_tenants",
+      "cluster_tenants_pkey",
+      "CREATE UNIQUE INDEX cluster_tenants_pkey ON _supavisor.cluster_tenants USING btree (id)"
+    ],
+    [
+      "cluster_tenants",
+      "cluster_tenants_tenant_external_id_index",
+      "CREATE UNIQUE INDEX cluster_tenants_tenant_external_id_index ON _supavisor.cluster_tenants USING btree (tenant_external_id)"
+    ],
+    [
+      "clusters",
+      "clusters_alias_index",
+      "CREATE UNIQUE INDEX clusters_alias_index ON _supavisor.clusters USING btree (alias)"
+    ],
+    [
+      "clusters",
+      "clusters_pkey",
+      "CREATE UNIQUE INDEX clusters_pkey ON _supavisor.clusters USING btree (id)"
+    ],
+    [
+      "schema_migrations",
+      "schema_migrations_pkey",
+      "CREATE UNIQUE INDEX schema_migrations_pkey ON _supavisor.schema_migrations USING btree (version)"
+    ],
+    [
+      "tenants",
+      "tenants_external_id_index",
+      "CREATE UNIQUE INDEX tenants_external_id_index ON _supavisor.tenants USING btree (external_id)"
+    ],
+    [
+      "tenants",
+      "tenants_pkey",
+      "CREATE UNIQUE INDEX tenants_pkey ON _supavisor.tenants USING btree (id)"
+    ],
+    [
+      "users",
+      "users_db_user_alias_tenant_external_id_mode_type_index",
+      "CREATE UNIQUE INDEX users_db_user_alias_tenant_external_id_mode_type_index ON _supavisor.users USING btree (db_user_alias, tenant_external_id, mode_type)"
+    ],
+    [
+      "users",
+      "users_pkey",
+      "CREATE UNIQUE INDEX users_pkey ON _supavisor.users USING btree (id)"
+    ],
+    [
+      "users",
+      "users_tenant_external_id_index",
+      "CREATE INDEX users_tenant_external_id_index ON _supavisor.users USING btree (tenant_external_id)"
+    ]
+  ],
+  "migrations": [
+    20230125140723,
+    20230418151441,
+    20230502101623,
+    20230601125553,
+    20230619091028,
+    20230705154938,
+    20230711142028,
+    20230714153019,
+    20230718175315,
+    20230801090256,
+    20230801090942,
+    20230914102712,
+    20230919091334,
+    20230919100141,
+    20231004133121,
+    20231214120555,
+    20231229010413,
+    20240822132419,
+    20250811122429,
+    20250812153752,
+    20260307125522,
+    20260323000000
+  ],
+  "relations": [
+    [
+      "cluster_tenants",
+      "r",
+      false,
+      false
+    ],
+    [
+      "clusters",
+      "r",
+      false,
+      false
+    ],
+    [
+      "schema_migrations",
+      "r",
+      false,
+      false
+    ],
+    [
+      "tenants",
+      "r",
+      false,
+      false
+    ],
+    [
+      "users",
+      "r",
+      false,
+      false
+    ]
+  ],
+  "rules": [],
+  "triggers": []
+}

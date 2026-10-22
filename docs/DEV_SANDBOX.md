@@ -78,3 +78,11 @@ Reset restores the local backend's own baseline; it does not run Drizzle. App ex
 ## Self-hosted migrations are a separate operator action
 
 `env myapp --admin -- bun run db:migrate` targets a long-lived project, grants real admin access and is not part of autonomous sandbox permission. Runtime clients should use least-privileged app roles. Official `migration up --db-url`/`db push --db-url` are available for operators using SQL migrations, but sbfleet does not force them or generate secret-bearing URL arguments. Types can use explicit local CLI --local during app development. No Cloud credentials are needed for direct self-hosted DB connections.
+
+### Agent observations
+
+The local-only, read-only `sbfleet mcp` interface observes fleet-managed projects.
+Sandbox adoption remains a separate authority and is not inferred from a fleet
+project or from Docker names. Fleet rows report sandbox as NOT_APPLICABLE.
+Use the existing sandbox status/doctor commands for sandbox diagnostics. See
+[agent setup](CLI_REFERENCE.md#local-only-read-only-mcp).

@@ -2,6 +2,35 @@
 
 All notable changes to SBfleet are documented here.
 
+## 1.1.0 — Release candidate
+
+Feature release prepared for publication. The current public release remains v1.0.1.
+
+### Fleet observability
+
+- Read-only fleet dashboard with project health, backup and service visibility.
+- Machine-readable `status --all --json` using a versioned fleet snapshot.
+- Responsive terminal panels, labelled connections, clear attention reasons,
+  project details, help and predictable keyboard/quit behavior.
+
+### Agent integration
+
+- Local stdio, read-only MCP with fleet, status, connection, backup, doctor-summary
+  and schema tools. No remote listener, credential reveal or mutation tools.
+
+### Project cloning
+
+- Verified same-pin clone with fresh project identity, ports and paths.
+- Destination pooler rebinding and preservation of the source's prior runtime state.
+- Verified targets end STOPPED. Required recovery credentials remain shared;
+  cloning does not rotate secrets or support cross-version cloning or rollback.
+
+### Schema planning
+
+- Read-only schema diff and migration planning for the reviewed same pin.
+- Classification as SAFE, REVIEW_REQUIRED, DESTRUCTIVE or UNSUPPORTED.
+- No automatic migration execution, SQL preview or `migrate apply`.
+
 ## 1.0.1 — 2026-10-18
 
 Patch release focused on reliability and safety checks; no new product features.

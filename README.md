@@ -39,7 +39,7 @@ sbfleet connection myapp
 sbfleet studio myapp --url-only
 ```
 
-Resolve any readiness failures before creating a project. The public clone installs the current release, **1.0.1**.
+Resolve any readiness failures before creating a project. This source tree installs **1.1.0**. Release publication is tracked on the [GitHub releases page](https://github.com/Pepinko81/sbfleet/releases).
 
 Before your first backup, configure an age recipient in `fleet.json` and keep the corresponding private identity securely backed up outside the fleet data directory. See [backup setup](docs/OPERATIONS.md#backup-and-restore). With your identity file in place:
 
@@ -201,7 +201,12 @@ Uninstall removes managed software and the SBfleet shim. It preserves fleet data
 
 ## Project status
 
-SBfleet **1.0.1** is a patch release focused on reliability and safety checks. It adds no new product features. See the [1.0.1 release notes](CHANGELOG.md#101--2026-10-18). Fresh installation, reinstall, uninstall/reinstall, the 1.0.0 upgrade path, and production installation validation passed without managed project or registry mutation.
+SBfleet **1.1.0** is a feature release adding fleet observability, local read-only
+agent integration, verified same-pin cloning, and read-only schema planning.
+See the [1.1.0 release notes](CHANGELOG.md#110--release-candidate).
+This release candidate is prepared for publication; the current public release
+remains v1.0.1 until v1.1.0 is published. Migration planning does not execute SQL,
+and there is no `migrate apply`.
 
 ## Independence
 
@@ -210,3 +215,82 @@ SBfleet is an independent open-source project and is **not affiliated with, spon
 ## License
 
 [MIT](LICENSE). Upstream software retains its own licenses; see [third-party notices](THIRD_PARTY_NOTICES.md).
+
+## v1.1.0 capabilities
+
+These capabilities are included in this 1.1.0 release candidate, in addition to
+the existing isolated stacks, guarded lifecycle, upstream Studio, verified
+recovery and disposable local sandbox.
+
+### Fleet observations and coding agents
+
+`sbfleet status --all --json` returns the versioned, secret-safe fleet snapshot.
+`sbfleet dashboard` opens a **read-only** terminal dashboard (arrows to select,
+`r`/`R` to refresh, Enter for details, `?` for help, `q`/`Q` or Ctrl+C to quit).
+Use `--refresh 30` for periodic observations or
+`--once` for plain output. No lifecycle actions are available.
+The interactive shell exposes the same dashboard as `/dashboard`, listed in
+`/help` and Tab completion; quitting returns to the shell.
+
+`sbfleet mcp` serves the same observations through **local-only, read-only stdio
+MCP**. It has no TCP listener and no credential or mutation tools. See
+[CLI reference](docs/CLI_REFERENCE.md#fleet-observation-interfaces) for the schema,
+limitations and agent configuration.
+
+### Verified project clone
+
+`sbfleet clone SOURCE TARGET --identity /private/age-identity.txt [--json]`
+creates a verified clone with a fresh project UUID, Compose identity, ports and
+paths. The initial supported pin is exactly `self-hosted/v0.8.2` at
+`564eab8ad7840b13324f68b1bfac074ef8d51c21`; cross-pin cloning is refused.
+Pooler tenant state is rebound to the destination, and the target ends **STOPPED**.
+The source returns to its prior runtime state. Required application recovery
+credentials remain shared; cloning does not rotate them. Ordinary same-project
+restore semantics are unchanged. See [clone contract](docs/BACKUP_RESTORE.md#verified-same-pin-clone).
+
+### Read-only schema diff and migration planning
+
+`sbfleet schema diff SOURCE TARGET [--json]` compares PostgreSQL catalogs.
+SOURCE is the desired schema; differences describe changes to make TARGET match it.
+`sbfleet migrate plan SOURCE TARGET [--json]` classifies those same differences as
+SAFE, REVIEW_REQUIRED, DESTRUCTIVE or UNSUPPORTED. Both require running, owned
+project databases on the reviewed same pin. Neither command changes a database,
+starts a project, executes migration SQL or upgrades Supabase. No `migrate apply`
+exists. SQL preview is intentionally deferred.
+
+The local MCP tools `schema_diff` and `migration_plan` use the same services.
+Dashboard refresh does not perform schema comparisons. See the
+[schema contract](docs/CLI_REFERENCE.md#schema-diff-and-migration-plan) for coverage,
+expression fingerprints, unsupported semantics and conservative plan rules.
+
+## Roadmap
+
+Roadmap reflects current direction and may change; it is not a delivery commitment.
+
+### Included in v1.1.0
+
+- Multiple isolated self-hosted Supabase stacks
+- Upstream Studio per project
+- Guarded lifecycle
+- Encrypted backup / verified recovery
+- Disposable local sandbox
+- Read-only fleet dashboard
+- Machine-readable fleet JSON
+- Local read-only MCP
+- Verified same-pin project cloning
+- Schema diff
+- Migration planning (read-only; no migration execution)
+
+### Next
+
+- Scheduled backups
+- Retention policies
+- Fleet-wide operations
+- Health / backup notifications
+
+### Later
+
+- Rich local control-plane UI
+- Guarded migration execution
+- Project/environment templates
+- Staging workflows

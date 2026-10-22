@@ -33,7 +33,9 @@ _PROJECT_SCOPED = frozenset(
 )
 
 # Host-level / meta commands never receive an injected project slug.
-_NO_INJECT = frozenset({"projects", "create", "sandbox", "use", "help", "commands", "exit"})
+_NO_INJECT = frozenset(
+    {"projects", "dashboard", "create", "sandbox", "use", "help", "commands", "exit"}
+)
 
 
 @dataclass(frozen=True)
@@ -46,6 +48,7 @@ class SlashCommand:
 
 SLASH_COMMANDS: tuple[SlashCommand, ...] = (
     SlashCommand("projects", "List fleet projects"),
+    SlashCommand("dashboard", "Read-only fleet terminal dashboard"),
     SlashCommand("create", "Create a project"),
     SlashCommand("use", "Select project (/use --clear returns to fleet root)", takes_project=True),
     SlashCommand("start", "Start project stack", takes_project=True),

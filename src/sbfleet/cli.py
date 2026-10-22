@@ -34,6 +34,20 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("projects", help="List projects")
     p.add_argument("--json", action="store_true")
 
+    for group, action in (("schema", "diff"), ("migrate", "plan")):
+        p = sub.add_parser(group, help="Read-only schema comparison and planning")
+        actions = p.add_subparsers(dest="schema_action", required=True)
+        command = actions.add_parser(action, help="Preview TARGET changes to match SOURCE")
+        command.add_argument("source")
+        command.add_argument("target")
+        command.add_argument("--json", action="store_true")
+
+    p = sub.add_parser("clone", help="Verified same-pin clone; target ends STOPPED")
+    p.add_argument("source")
+    p.add_argument("target")
+    p.add_argument("--identity", help="Age identity for verified backup recovery")
+    p.add_argument("--json", action="store_true")
+
     p = sub.add_parser("create", help="Create project")
     p.add_argument("slug")
     p.add_argument("--name")
@@ -80,9 +94,17 @@ def build_parser() -> argparse.ArgumentParser:
         if name in {"start", "restart"}:
             p.add_argument("--timeout", type=int, default=300)
 
-    p = sub.add_parser("status", help="Project status")
-    p.add_argument("project")
+    p = sub.add_parser("status", help="Project or fleet status")
+    group = p.add_mutually_exclusive_group(required=True)
+    group.add_argument("project", nargs="?")
+    group.add_argument("--all", action="store_true")
     p.add_argument("--json", action="store_true")
+
+    p = sub.add_parser("dashboard", help="Read-only fleet terminal dashboard")
+    p.add_argument("--refresh", type=int, default=0, metavar="SECONDS")
+    p.add_argument("--once", action="store_true", help="Print one snapshot and exit")
+
+    sub.add_parser("mcp", help="Local-only read-only MCP server (stdio)")
 
     p = sub.add_parser("studio", help="Studio URL / open")
     p.add_argument("project")
@@ -232,6 +254,54 @@ def _dispatch(args: argparse.Namespace) -> int:
 
     cmd = args.command
     try:
+        if cmd in {"schema", "migrate"}:
+            from sbfleet.schema import schema_cmd
+
+            return schema_cmd(
+                reg.resolve_home(args.home),
+                args.source,
+                args.target,
+                plan=cmd == "migrate",
+                as_json=args.json,
+            )
+        if cmd == "clone":
+            from sbfleet.clone import clone_cmd
+
+            return clone_cmd(
+                reg.resolve_home(args.home),
+                args.source,
+                args.target,
+                identity=args.identity,
+                as_json=args.json,
+            )
+        if cmd == "status" and bool(args.project) == bool(args.all):
+            print("error: status requires either PROJECT or --all", file=sys.stderr)
+            return EXIT_USAGE
+        if cmd in {"dashboard", "mcp"} or (cmd == "status" and args.all):
+            # Observers must never initialize a fleet or acquire mutation locks.
+            root = reg.resolve_home(args.home)
+            if cmd == "mcp":
+                from sbfleet.mcp_server import run_mcp
+
+                return run_mcp(root)
+            if cmd == "dashboard":
+                try:
+                    from sbfleet.dashboard import run_dashboard
+                except ImportError:
+                    print("error: dashboard dependencies unavailable", file=sys.stderr)
+                    return EXIT_PREREQUISITE
+
+                return run_dashboard(root, refresh=args.refresh, once=args.once)
+            from sbfleet.fleet import collect_snapshot, snapshot_json
+
+            snapshot = collect_snapshot(root)
+            if args.json:
+                print(snapshot_json(snapshot))
+            else:
+                from sbfleet.dashboard import render
+
+                print(render(snapshot))
+            return EXIT_OK if snapshot.observation_complete else EXIT_UNHEALTHY
         if cmd == "projects":
             root = _root(args)
             rows = reg.list_projects(root)

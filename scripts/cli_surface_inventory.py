@@ -50,7 +50,12 @@ def main(argv: list[str] | None = None) -> int:
 
     public_commands = {
         "projects",
+        "dashboard",
+        "mcp",
         "create",
+        "clone",
+        "schema",
+        "migrate",
         "start",
         "stop",
         "restart",

@@ -1,0 +1,155 @@
+{
+  "$defs": {
+    "JsonValue": {},
+    "Namespace": {
+      "additionalProperties": false,
+      "properties": {
+        "classification": {
+          "enum": [
+            "APPLICATION",
+            "SUPABASE_MANAGED",
+            "SYSTEM",
+            "IGNORED"
+          ],
+          "title": "Classification",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "classification"
+      ],
+      "title": "Namespace",
+      "type": "object"
+    },
+    "SchemaObject": {
+      "additionalProperties": false,
+      "properties": {
+        "classification": {
+          "default": "APPLICATION",
+          "enum": [
+            "APPLICATION",
+            "SUPABASE_MANAGED",
+            "SYSTEM",
+            "IGNORED"
+          ],
+          "title": "Classification",
+          "type": "string"
+        },
+        "facts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Facts",
+          "type": "object"
+        },
+        "key": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Key",
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "SCHEMA",
+            "TABLE",
+            "COLUMN",
+            "CONSTRAINT",
+            "INDEX",
+            "FUNCTION",
+            "RLS",
+            "POLICY",
+            "VIEW",
+            "MATERIALIZED_VIEW",
+            "ENUM",
+            "SEQUENCE",
+            "TRIGGER",
+            "EXTENSION",
+            "UNSUPPORTED"
+          ],
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "key",
+        "facts"
+      ],
+      "title": "SchemaObject",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "error": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "namespaces": {
+      "items": {
+        "$ref": "#/$defs/Namespace"
+      },
+      "title": "Namespaces",
+      "type": "array"
+    },
+    "objects": {
+      "items": {
+        "$ref": "#/$defs/SchemaObject"
+      },
+      "title": "Objects",
+      "type": "array"
+    },
+    "pin": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Pin",
+      "type": "object"
+    },
+    "project": {
+      "title": "Project",
+      "type": "string"
+    },
+    "schema_model_version": {
+      "const": "sbfleet-schema-v1",
+      "default": "sbfleet-schema-v1",
+      "title": "Schema Model Version",
+      "type": "string"
+    },
+    "state": {
+      "default": "UNKNOWN",
+      "enum": [
+        "KNOWN",
+        "UNKNOWN"
+      ],
+      "title": "State",
+      "type": "string"
+    }
+  },
+  "required": [
+    "project"
+  ],
+  "title": "SchemaSnapshot",
+  "type": "object"
+}

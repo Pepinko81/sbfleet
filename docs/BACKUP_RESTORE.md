@@ -8,7 +8,7 @@ V1 uses a **clean-shutdown physical PostgreSQL cluster backup**, with Storage fr
 
 Official upstream PG upgrade documentation identifies both db/data and db-config/pgsodium_root.key as recovery-critical. The supported standard/storage-enabled deployment additionally requires **all** file-backend Storage objects. Remote S3 backends, external tablespaces/WAL directories, custom mounts and user-defined external data paths are refused as unsupported before backup.
 
-An archive is portable only to a compatible Linux Docker host architecture with the exact recorded upstream/image set. Cross-major or cross-architecture restores are not promised. Missing pinned images is WAITING_EXTERNAL, never permission to restore into a different image. Physical restored credentials remain those of the same project identity; this is recovery, not a clone-project feature.
+An archive is portable only to a compatible Linux Docker host architecture with the exact recorded upstream/image set. Cross-major or cross-architecture restores are not promised. Missing pinned images is WAITING_EXTERNAL, never permission to restore into a different image. Ordinary restore retains the same project identity and its physical recovery credentials. The separate verified clone contract is documented below.
 
 **Interrupted update interaction:** A pre-update recovery archive remains valuable evidence/data protection. While an unresolved `UPDATING` journal exists, ordinary restore is refused. After configuration promotion (destination pin may already differ from the archive), **direct same-pin restore into that promoted destination is unsupported**. Use `update --reconcile --operation-id` for the reviewed edge when a promote-record exists. sbfleet does not claim generic cross-version rollback.
 
@@ -52,7 +52,7 @@ Backup-time verification uses a **minimal isolated** environment and returns `Re
 
 ## Restore destination reconciliation
 
-Archived `.env` is never copied wholesale. Source recovery material (JWT/Postgres/Vault/crypto keys, `POOLER_TENANT_ID`, …) is merged with destination-owned placement/authority fields (Compose selectors, ports, URLs, dashboard username). After reconciliation, Run 2A authority/Compose validation is re-run before start.
+Archived `.env` is never copied wholesale. Source recovery material (JWT/Postgres/Vault/crypto keys, `POOLER_TENANT_ID`, …) is merged with destination-owned placement/authority fields (Compose selectors, ports, URLs, dashboard username). After reconciliation, authority/Compose validation is re-run before start.
 
 `--recover` absent-project recovery remains unsupported. Default remove requires `require_recovery_backup` (usable archive + current contract evidence); `--no-backup` remains the explicit bypass.
 
@@ -61,3 +61,43 @@ its exit code and journal error. Independent cleanup error and exact operation-o
 residual path are recorded in the same journal and printed with configured-secret
 redaction. A successful encrypted archive is retained on cleanup failure; the command
 returns nonzero. Cleanup covers only this operation's staging, without secure-erase claims.
+
+## Verified same-pin clone
+
+`clone SOURCE TARGET` is a separate, bounded operation; ordinary `restore` still
+requires archive UUID == destination UUID. Clone does not rewrite a source
+manifest or receipt. It validates the original archive against SOURCE, then
+installs its verified payload into a freshly created, independently owned target.
+No source project directory, journal, update history or backup history is copied
+as destination authority. The fleet ID is resolved from the destination registry;
+within one fleet it remains the same, while project/Compose identities differ.
+
+Initial clone support is exactly self-hosted/v0.8.2 at
+564eab8ad7840b13324f68b1bfac074ef8d51c21, with compatible DB image/platform and the
+reviewed default Supavisor 2.9.12 catalog. Only one default tenant and one manager
+credential row, with no cluster mappings, are supported. Unexpected columns,
+constraints, indexes, triggers/rules, migrations or tenant settings refuse.
+
+The bounded transaction creates a new UUID-derived tenant, moves its single
+manager credential to that tenant with a new internal row UUID, and removes the
+source tenant from the target database. Password ciphertext is preserved and
+checked byte-for-byte. Repeating the operation is refused. Destination environment
+and connection information use the new tenant and allocated ports. Both pooler
+TCP modes must accept the destination tenant and reject the source tenant.
+
+COPY: PG/Auth/Storage/functions data and dependent JWT/API, database password,
+Vault/pgsodium, SECRET_KEY_BASE, VAULT_ENC_KEY and PG_META_CRYPTO_KEY recovery
+material. Regenerating these independently would risk unusable restored data.
+REGENERATE: project identity, Compose selectors/labels, ports, paths, URLs, Studio
+settings and dashboard credentials. TRANSFORM: pooler tenant linkage and internal
+tenant/user row identities. REFUSE: copied registry authority, age private keys,
+operation/update/backup history, sandbox adoption, unsupported pins/pooler state.
+Clones therefore share required application credentials with the source; they do
+not promise cryptographic isolation or automatic credential rotation.
+
+The destination is temporarily started for bounded Auth/source-fact, Storage,
+Vault challenge, health and pooler checks, then stopped before success. SOURCE
+retains its identity/configuration and prior runtime state, with only ordinary
+backup metadata/quiesce effects. Failure removes only this operation's positively
+proven target resources; otherwise it preserves the target for review. Safe
+operation evidence remains outside the target. No prune or prefix cleanup exists.

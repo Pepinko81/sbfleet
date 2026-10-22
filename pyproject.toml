@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sbfleet"
-version = "1.0.1"
+version = "1.1.0"
 description = "Small CLI for multiple official self-hosted Supabase projects on one Linux host"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -13,6 +13,8 @@ authors = [{ name = "sbfleet" }]
 dependencies = [
   "tomli>=2.0.1; python_version < '3.11'",
   "prompt_toolkit>=3.0.47",
+  "mcp>=1.12,<2",
+  "pydantic>=2.8,<3",
 ]
 
 [project.urls]
@@ -49,3 +51,6 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.setuptools.package-data]
+sbfleet = ["fleet.schema.json", "pooler.schema.json", "schema-diff.schema.json", "migration-plan.schema.json", "schema-snapshot.schema.json"]

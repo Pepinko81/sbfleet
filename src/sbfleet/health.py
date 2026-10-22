@@ -95,7 +95,9 @@ class _SameOriginRedirectHandler(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-def inspect_containers_result(deployment: Path, compose_project: str) -> ContainerInspectResult:
+def inspect_containers_result(
+    deployment: Path, compose_project: str, *, read_only: bool = False
+) -> ContainerInspectResult:
     env = {
         "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
         "HOME": str(deployment / ".run-home"),
@@ -103,7 +105,8 @@ def inspect_containers_result(deployment: Path, compose_project: str) -> Contain
         "COMPOSE_FILE": "docker-compose.yml:docker-compose.override.yml",
         "COMPOSE_PATH_SEPARATOR": ":",
     }
-    (deployment / ".run-home").mkdir(mode=0o700, exist_ok=True)
+    if not read_only:
+        (deployment / ".run-home").mkdir(mode=0o700, exist_ok=True)
     result = run(
         ["docker", "compose", "ps", "--format", "json"],
         cwd=deployment,
@@ -329,9 +332,9 @@ def _project_locations(root: Path, slug: str, meta: dict[str, Any]) -> dict[str,
     }
 
 
-def collect_status(root: Path, slug: str) -> StatusReport:
+def collect_status(root: Path, slug: str, *, read_only: bool = False) -> StatusReport:
     """Ordinary project status — never suppresses unresolved maintenance journals."""
-    return _collect_status(root, slug, mutation_ctx=None)
+    return _collect_status(root, slug, mutation_ctx=None, read_only=read_only)
 
 
 def collect_status_for_mutation(mutation_ctx: MutationContext) -> StatusReport:
@@ -350,11 +353,16 @@ def _collect_status(
     slug: str,
     *,
     mutation_ctx: MutationContext | None,
+    read_only: bool = False,
 ) -> StatusReport:
     meta = reg.read_project(root, slug)
     deployment = reg.project_dir(root, slug) / "deployment"
     journal = reg.read_operation_journal(root, slug) or {}
-    inspected = inspect_containers_result(deployment, str(meta["compose_project"]))
+    inspected = (
+        inspect_containers_result(deployment, str(meta["compose_project"]), read_only=True)
+        if read_only
+        else inspect_containers_result(deployment, str(meta["compose_project"]))
+    )
     probes: list[ProbeResult] = []
 
     # Unresolved maintenance (including durable in_progress after process death)

@@ -1,0 +1,365 @@
+{
+  "$defs": {
+    "BackupObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "age_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Age Seconds"
+        },
+        "status": {
+          "default": "UNKNOWN",
+          "enum": [
+            "RECOVERY_VERIFIED",
+            "NONE",
+            "UNKNOWN"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "verified_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Verified At"
+        }
+      },
+      "title": "BackupObservation",
+      "type": "object"
+    },
+    "Check": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "state": {
+          "default": "UNKNOWN",
+          "enum": [
+            "HEALTHY",
+            "STOPPED",
+            "FAILED",
+            "UNKNOWN",
+            "STARTING",
+            "DEGRADED",
+            "UNHEALTHY"
+          ],
+          "title": "State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Check",
+      "type": "object"
+    },
+    "ProjectObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "attention": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Attention",
+          "type": "array"
+        },
+        "backup": {
+          "$ref": "#/$defs/BackupObservation"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/Check"
+          },
+          "title": "Checks",
+          "type": "array"
+        },
+        "display_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display Name"
+        },
+        "endpoints": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Endpoints",
+          "type": "object"
+        },
+        "errors": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Errors",
+          "type": "array"
+        },
+        "fleet_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fleet Id"
+        },
+        "health_state": {
+          "default": "UNKNOWN",
+          "enum": [
+            "HEALTHY",
+            "STOPPED",
+            "FAILED",
+            "UNKNOWN",
+            "STARTING",
+            "DEGRADED",
+            "UNHEALTHY"
+          ],
+          "title": "Health State",
+          "type": "string"
+        },
+        "operation_unresolved": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Operation Unresolved"
+        },
+        "ports": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Ports",
+          "type": "object"
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Project Id"
+        },
+        "resource_usage": {
+          "const": "UNKNOWN",
+          "default": "UNKNOWN",
+          "title": "Resource Usage",
+          "type": "string"
+        },
+        "runtime_state": {
+          "default": "UNKNOWN",
+          "enum": [
+            "RUNNING",
+            "STOPPED",
+            "UNKNOWN"
+          ],
+          "title": "Runtime State",
+          "type": "string"
+        },
+        "sandbox": {
+          "const": "NOT_APPLICABLE",
+          "default": "NOT_APPLICABLE",
+          "title": "Sandbox",
+          "type": "string"
+        },
+        "services": {
+          "items": {
+            "$ref": "#/$defs/Check"
+          },
+          "title": "Services",
+          "type": "array"
+        },
+        "slug": {
+          "title": "Slug",
+          "type": "string"
+        },
+        "state": {
+          "default": "UNKNOWN",
+          "enum": [
+            "HEALTHY",
+            "STOPPED",
+            "FAILED",
+            "UNKNOWN",
+            "STARTING",
+            "DEGRADED",
+            "UNHEALTHY"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "studio_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Studio Url"
+        },
+        "update_available": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Update Available"
+        },
+        "upstream_ref": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Upstream Ref"
+        },
+        "upstream_sha": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Upstream Sha"
+        }
+      },
+      "required": [
+        "slug"
+      ],
+      "title": "ProjectObservation",
+      "type": "object"
+    },
+    "Totals": {
+      "additionalProperties": false,
+      "properties": {
+        "failed": {
+          "default": 0,
+          "title": "Failed",
+          "type": "integer"
+        },
+        "healthy": {
+          "default": 0,
+          "title": "Healthy",
+          "type": "integer"
+        },
+        "needing_attention": {
+          "default": 0,
+          "title": "Needing Attention",
+          "type": "integer"
+        },
+        "other": {
+          "default": 0,
+          "title": "Other",
+          "type": "integer"
+        },
+        "projects": {
+          "default": 0,
+          "title": "Projects",
+          "type": "integer"
+        },
+        "recovery_verified_backups": {
+          "default": 0,
+          "title": "Recovery Verified Backups",
+          "type": "integer"
+        },
+        "stopped": {
+          "default": 0,
+          "title": "Stopped",
+          "type": "integer"
+        },
+        "unknown": {
+          "default": 0,
+          "title": "Unknown",
+          "type": "integer"
+        }
+      },
+      "title": "Totals",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "errors": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Errors",
+      "type": "array"
+    },
+    "observation_complete": {
+      "default": true,
+      "title": "Observation Complete",
+      "type": "boolean"
+    },
+    "observed_at": {
+      "title": "Observed At",
+      "type": "string"
+    },
+    "projects": {
+      "items": {
+        "$ref": "#/$defs/ProjectObservation"
+      },
+      "title": "Projects",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "sbfleet.fleet.v1",
+      "default": "sbfleet.fleet.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "totals": {
+      "$ref": "#/$defs/Totals"
+    }
+  },
+  "required": [
+    "observed_at"
+  ],
+  "title": "FleetSnapshot",
+  "type": "object"
+}

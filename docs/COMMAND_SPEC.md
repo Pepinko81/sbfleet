@@ -76,7 +76,7 @@ Direct command authorizes documented downtime. Not idempotent: every success get
 
 `restore PROJECT ARCHIVE [--yes] [--identity FILE]` / `/restore [P] ARCHIVE ...`.
 
-**Implemented now (prior hardening work. **Pre-mutation preflight** (decrypt, manifest/identity prevalidation, disk preflight, disposable requested-archive recovery verification) runs **without** writing a durable `RESTORING` journal. Primary preflight refusal returns the existing exit code, leaves prior journal unchanged, attempts honest cleanup of operation-owned staging (reports residual paths on stderr if cleanup fails; does not invent RESTORING solely for cleanup failure), and does not claim quarantine retention when quarantine was never created. **Durable `RESTORING` begins** only after successful recovery verification, immediately before `creating_pre_restore_backup` (runtime quiesce / first target mutation). Post-boundary failures call `fail_operation` (blocking `RESTORING`/`failed`); quarantine is retained only when it was created. Field-level `.env` reconciliation + Run 2A revalidation; RESTORED only after destination HEALTHY. No public restore `--reconcile` / `--force`. No JSON.
+**Pre-mutation preflight** (decrypt, manifest/identity prevalidation, disk preflight, disposable requested-archive recovery verification) runs **without** writing a durable `RESTORING` journal. Primary preflight refusal returns the existing exit code, leaves prior journal unchanged, attempts honest cleanup of operation-owned staging (reports residual paths on stderr if cleanup fails; does not invent RESTORING solely for cleanup failure), and does not claim quarantine retention when quarantine was never created. **Durable `RESTORING` begins** only after successful recovery verification, immediately before `creating_pre_restore_backup` (runtime quiesce / first target mutation). Post-boundary failures call `fail_operation` (blocking `RESTORING`/`failed`); quarantine is retained only when it was created. Field-level `.env` reconciliation + authority/Compose revalidation; RESTORED only after destination HEALTHY. No public restore `--reconcile` / `--force`. No JSON.
 
 ### update
 
@@ -119,7 +119,7 @@ JSON only for `--dry-run` (reconcile prints JSON diagnosis/result on stdout).
 
 `sandbox {start,status,stop,reset,studio,destroy,env} PATH` / `/sandbox ...` (PATH required). status supports `--json`; reset/destroy require `--yes`; start supports `--migration-mode supabase|external` and `--revalidate` (fingerprint re-adoption only); env requires `-- COMMAND ...` with child argv preserved (parent does not consume child `--yes`/`--json`). Honors fleet `--home` for sandbox state root.
 
-**Implemented (Run 2D + prior release + prior release):** pinned CLI 2.118.0; real TOML parse; locked adoption (canonical root + UUID + unique project ID + fingerprint + inventory); crash-consistent project-id index; **immutable project ID after adoption** (`--revalidate` updates fingerprint only); **post-lock authority reread**; **per-class live ownership** before **start**/stop/reset/destroy/env (adopted start observes live namespace before CLI dispatch; post-start failure cleanup is attempt-delta only — `post_owned − pre_owned` — never broad `stop --project-id`; no cached-volume destroy fallback; full-namespace residual reinspect); fail-closed linked/dotenv grammar/network/binding/endpoint locality (PG query allowlist empty for CLI local URLs; HTTP no userinfo); `--migration-mode`; `env` no-spawn on UNKNOWN/absent; doctor `--sandbox` authoritative read-only checks. No passthrough remote flags. Hostile same-user isolation is **not** claimed.
+**Implemented:** pinned CLI 2.118.0; real TOML parse; locked adoption (canonical root + UUID + unique project ID + fingerprint + inventory); crash-consistent project-id index; **immutable project ID after adoption** (`--revalidate` updates fingerprint only); **post-lock authority reread**; **per-class live ownership** before **start**/stop/reset/destroy/env (adopted start observes live namespace before CLI dispatch; post-start failure cleanup is attempt-delta only — `post_owned − pre_owned` — never broad `stop --project-id`; no cached-volume destroy fallback; full-namespace residual reinspect); fail-closed linked/dotenv grammar/network/binding/endpoint locality (PG query allowlist empty for CLI local URLs; HTTP no userinfo); `--migration-mode`; `env` no-spawn on UNKNOWN/absent; doctor `--sandbox` authoritative read-only checks. No passthrough remote flags. Hostile same-user isolation is **not** claimed.
 
 ### help / exit / slash discovery
 
@@ -135,3 +135,54 @@ The following are **not** active V1 grammar. They may appear in roadmap or histo
 - remove `--identity`; resumable multi-phase remove journal for every failure branch
 - sandbox typed `project_id` confirmation beyond `--yes`
 - nginx `--output`, `--certificate`, `--certificate-key`, `--force`, install `--yes`/`--file`, host `/etc/nginx` mutation, DNS/TLS automation, validated deliverable TLS with cert paths
+
+## Fleet observers (v1.1.0)
+
+`status` accepts exactly one of positional PROJECT or `--all`. Existing project
+status JSON is unchanged. `status --all --json` emits `sbfleet.fleet.v1`, defined
+by the packaged `fleet.schema.json`, with sorted keys/projects, observation time,
+completeness, totals and allowlisted project observations. Incomplete observations
+exit 7; complete ones exit 0 regardless of project readiness.
+
+`dashboard [--once] [--refresh 0|5..3600]` is read-only, uses the canonical fleet
+snapshot, supports arrow selection, Enter details, ? help, r/R refresh, q/Q or
+Ctrl+C quit, Esc back/exit and PgUp/PgDn scrolling, and falls back to
+plain output without a terminal. Invalid refresh values exit 2.
+Interactive `/dashboard` delegates to that same handler, never injects the active
+project, appears in help/completion, and returns to the shell after quitting.
+
+`mcp` is local-only stdio and read-only. Its six original fleet tools are fleet_summary,
+list_projects, project_status, project_connection_info, backup_status and
+doctor_summary. Project tools take only `slug`. No transport selector, reveal,
+shell/env arguments or mutation methods exist. Agent setup and evidence limits
+are documented in CLI_REFERENCE. Observers never initialize a missing registry.
+
+## Verified clone (v1.1.0)
+
+`clone SOURCE TARGET [--identity PATH] [--json]` is CLI-only mutation. Both slugs
+are explicit; TARGET must be absent. Initial support is the exact reviewed
+self-hosted/v0.8.2 SHA 564eab8ad7840b13324f68b1bfac074ef8d51c21, standard/file storage,
+and default single-tenant pooler state. No cross-pin grammar is exposed.
+New project/Compose identity, paths and ports are generated in the existing fleet.
+Pooler tenant identity is rebound; required recovery crypto is preserved.
+Success requires destination verification, source prior-state preservation and
+TARGET STOPPED. JSON is `sbfleet.clone.v1`, exit 0 on success / 5 on failure.
+All MCP tools and the dashboard remain read-only; ordinary restore UUID validation
+is unchanged. Schema diff and migration planning are documented below.
+
+## Read-only schema planning
+
+- `schema diff SOURCE TARGET [--json]`
+- `migrate plan SOURCE TARGET [--json]`
+
+SOURCE is desired; TARGET is current. Both read one canonical `sbfleet-schema-v1`
+catalog representation. Diff returns ADDED/REMOVED/CHANGED/UNSUPPORTED; plan maps each
+item to SAFE/REVIEW_REQUIRED/DESTRUCTIVE/UNSUPPORTED. Differences are exit 0;
+observation/safety failures are exit 5 and UNKNOWN. Same reviewed pin and PostgreSQL 17
+only. Neither starts projects, writes fleet state nor executes migration SQL. No apply
+command or SQL preview exists. SQL expressions/definitions are fingerprints, with explicit
+partial/unsupported coverage; see CLI_REFERENCE for the complete contract.
+
+Local read-only MCP adds `schema_diff` and `migration_plan` using these same services.
+The six existing tools are unchanged. Dashboard refresh performs no schema comparison.
+Schema plans do not replace Supabase version upgrading.
