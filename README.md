@@ -39,7 +39,7 @@ sbfleet connection myapp
 sbfleet studio myapp --url-only
 ```
 
-Resolve any readiness failures before creating a project. This source tree installs **1.1.0**. Release publication is tracked on the [GitHub releases page](https://github.com/Pepinko81/sbfleet/releases).
+Resolve any readiness failures before creating a project. The current public release is **v1.1.0**. Release notes are on the [GitHub releases page](https://github.com/Pepinko81/sbfleet/releases).
 
 Before your first backup, configure an age recipient in `fleet.json` and keep the corresponding private identity securely backed up outside the fleet data directory. See [backup setup](docs/OPERATIONS.md#backup-and-restore). With your identity file in place:
 
@@ -203,9 +203,8 @@ Uninstall removes managed software and the SBfleet shim. It preserves fleet data
 
 SBfleet **1.1.0** is a feature release adding fleet observability, local read-only
 agent integration, verified same-pin cloning, and read-only schema planning.
-See the [1.1.0 release notes](CHANGELOG.md#110--release-candidate).
-This release candidate is prepared for publication; the current public release
-remains v1.0.1 until v1.1.0 is published. Migration planning does not execute SQL,
+See the [1.1.0 release notes](CHANGELOG.md#110--2026-10-22).
+**v1.1.0 is the current public release.** Migration planning remains read-only and does not execute SQL,
 and there is no `migrate apply`.
 
 ## Independence
@@ -218,7 +217,7 @@ SBfleet is an independent open-source project and is **not affiliated with, spon
 
 ## v1.1.0 capabilities
 
-These capabilities are included in this 1.1.0 release candidate, in addition to
+These capabilities are included in the released v1.1.0, in addition to
 the existing isolated stacks, guarded lifecycle, upstream Studio, verified
 recovery and disposable local sandbox.
 
@@ -236,6 +235,10 @@ The interactive shell exposes the same dashboard as `/dashboard`, listed in
 MCP**. It has no TCP listener and no credential or mutation tools. See
 [CLI reference](docs/CLI_REFERENCE.md#fleet-observation-interfaces) for the schema,
 limitations and agent configuration.
+
+![SBfleet read-only dashboard showing healthy and stopped projects, selected-project details, labelled connections, services and keyboard controls](docs/assets/readme/05-fleet-dashboard.png)
+
+*Sanitized fixture captured with the unmodified v1.1.0 dashboard renderer at 120×35. Example projects and observations; no private fleet data.*
 
 ### Verified project clone
 
@@ -267,30 +270,35 @@ expression fingerprints, unsupported semantics and conservative plan rules.
 
 Roadmap reflects current direction and may change; it is not a delivery commitment.
 
-### Included in v1.1.0
+v1.1.0 is the current release. Foundation and v1.1.0 are shipped; Next and Later are future direction.
 
-- Multiple isolated self-hosted Supabase stacks
-- Upstream Studio per project
-- Guarded lifecycle
-- Encrypted backup / verified recovery
-- Disposable local sandbox
-- Read-only fleet dashboard
-- Machine-readable fleet JSON
-- Local read-only MCP
-- Verified same-pin project cloning
-- Schema diff
-- Migration planning (read-only; no migration execution)
+### Shipped — Foundation
+
+- ✓ Isolated stacks
+- ✓ Studio per project
+- ✓ Guarded lifecycle
+- ✓ Encrypted backup and verified recovery
+- ✓ Disposable agent sandbox
+
+### Shipped — v1.1.0
+
+- ✓ Fleet dashboard (read-only)
+- ✓ Machine-readable JSON
+- ✓ Local read-only MCP
+- ✓ Verified same-pin cloning
+- ✓ Schema diff
+- ✓ Migration planning (read-only; no migration execution)
 
 ### Next
 
 - Scheduled backups
 - Retention policies
 - Fleet-wide operations
-- Health / backup notifications
+- Health and backup notifications
 
 ### Later
 
-- Rich local control-plane UI
+- Richer local control-plane UI
 - Guarded migration execution
 - Project/environment templates
 - Staging workflows

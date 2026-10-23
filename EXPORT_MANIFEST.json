@@ -2,8 +2,8 @@
   "format_version": 1,
   "product": "sbfleet",
   "release_version": "1.1.0",
-  "exported_at_utc": "2026-10-22T15:37:07+00:00",
-  "file_count": 191,
+  "exported_at_utc": "2026-10-23T17:46:12+00:00",
+  "file_count": 192,
   "files": [
     ".gitignore",
     "CHANGELOG.md",
@@ -36,6 +36,7 @@
     "docs/assets/readme/02-project-status.png",
     "docs/assets/readme/03-studio.png",
     "docs/assets/readme/04-sandbox-lifecycle.png",
+    "docs/assets/readme/05-fleet-dashboard.png",
     "packaging/public-deny-patterns.txt",
     "packaging/public-files.txt",
     "packaging/tool-pins.toml",

@@ -2,9 +2,9 @@
 
 All notable changes to SBfleet are documented here.
 
-## 1.1.0 — Release candidate
+## 1.1.0 — 2026-10-22
 
-Feature release prepared for publication. The current public release remains v1.0.1.
+Released feature version adding fleet observability, local agent integration, verified same-pin cloning and read-only schema planning.
 
 ### Fleet observability
 
